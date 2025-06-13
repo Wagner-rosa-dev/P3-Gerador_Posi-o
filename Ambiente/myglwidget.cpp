@@ -352,6 +352,9 @@ void MyGLWidget::gameTick() {
         //Atualiza a altura do trator para seguir o terreno
         m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
     }
+
+    float speedkm = m_tractorSpeed * 3.6f;
+    emit kmUpdated(speedkm);
     update(); // Reagenda paintGL()
 }
 

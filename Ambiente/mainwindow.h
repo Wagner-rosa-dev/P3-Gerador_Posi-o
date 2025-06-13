@@ -14,9 +14,11 @@ public:
 private slots:
     void updateFpsLabel(int fps);
     void updateTempLabel(float temp);
+    void updateKmLabel(float km);
 private:
     MyGLWidget *m_glWidget;
     QLabel *m_fpsLabel;
     QLabel *m_tempLabel;
+    QLabel *m_kmLabel;
 };
 #endif // MAINWINDOW_H

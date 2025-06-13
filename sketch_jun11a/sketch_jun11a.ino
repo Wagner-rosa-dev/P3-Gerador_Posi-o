@@ -1,7 +1,7 @@
 //Pino do potenciometro
 const int pinoPotenciometro = 35;
 //Velocidade que o trator pode atingir
-const float VELOCIDADE_MAXIMA = 10.0f;
+const float VELOCIDADE_MAXIMA = 20.0f;
 //Variavel para guardar o ultimo valor enviado, para evitar envios repetidos
 float ultimoValorEnviado = -1.0f;
 //limite de mudança para enviar um novo valor. Evita ruido do potenciometro

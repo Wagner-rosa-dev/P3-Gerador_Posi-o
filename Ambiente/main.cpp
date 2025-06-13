@@ -21,6 +21,6 @@ int main(int argc, char *argv[])
         qWarning() << "Tipo de renderização NÂO é OpenGLE. Verifique a Configurção";
     }
     MainWindow w;
-    w.show();
+    w.showFullScreen();
     return a.exec();
 }

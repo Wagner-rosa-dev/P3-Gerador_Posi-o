@@ -12,6 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_glWidget = new MyGLWidget(this);
     m_fpsLabel = new QLabel("FPS: --", this);
     m_tempLabel = new QLabel("CPU: -- °C", this);
+    m_kmLabel = new QLabel("Velovidade: 0.0 km/h", this);
 
     //2 Estiliza os labels para que fiquem bem visiveis
     QFont labelFont("Arial", 12, QFont::Bold);
@@ -19,6 +20,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_fpsLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px");
     m_tempLabel->setFont(labelFont);
     m_tempLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px");
+    m_kmLabel->setFont(labelFont);
+    m_kmLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px");
+
 
     //Cria um layout de grade par asobrepor os widgets
     QGridLayout *mainLayout = new QGridLayout(this);
@@ -30,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
     //Adiciona os labels na mesma celula da grade, mas com alinhamento diferente
     mainLayout->addWidget(m_fpsLabel, 0, 0, Qt::AlignTop | Qt::AlignLeft);
     mainLayout->addWidget(m_tempLabel, 0, 0, Qt::AlignTop | Qt::AlignRight);
+    mainLayout->addWidget(m_kmLabel, 0, 0, Qt::AlignBottom | Qt::AlignLeft);
 
     //Define o layout principal para a janela
     setLayout(mainLayout);
@@ -39,6 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_glWidget, &MyGLWidget::fpsUpdated, this, &MainWindow::updateFpsLabel);
     //Conecta o sinal tempUpdated do m_glWidget ao slote updatetempLabel desta janela
     connect(m_glWidget, &MyGLWidget::tempUpdated, this, &MainWindow::updateTempLabel);
+    //Conecta o sinal tempUpdated do m_glWidget ao slote updatetempLabel desta janela
+    connect(m_glWidget, &MyGLWidget::kmUpdated, this, &MainWindow::updateKmLabel);
 
     resize(800, 600);
 }
@@ -55,3 +62,9 @@ void MainWindow::updateTempLabel(float temp)
 {
     m_tempLabel->setText(QString("CPU: %1 °C").arg(temp, 0, 'f', 1));
 }
+
+void MainWindow::updateKmLabel(float km)
+{
+    m_kmLabel->setText(QString("Velocidade: %1 Km/h").arg(km, 0, 'f', 1));
+}
+

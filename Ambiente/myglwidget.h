@@ -26,6 +26,7 @@ signals:
     //Sinais sao como anuncios que a classe faz
     void fpsUpdated(int fps);
     void tempUpdated(float temp);
+    void kmUpdated(float km);
 protected:
     void initializeGL() override;
     void paintGL() override;
