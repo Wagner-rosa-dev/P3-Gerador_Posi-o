@@ -12,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_glWidget = new MyGLWidget(this);
     m_fpsLabel = new QLabel("FPS: --", this);
     m_tempLabel = new QLabel("CPU: -- °C", this);
-    m_kmLabel = new QLabel("Velovidade: 0.0 km/h", this);
+    m_kmLabel = new QLabel("Velocidade: 0.0 km/h", this);
     m_lonlabel = new QLabel("Lon: 0.0",this);
     m_latLabel = new QLabel("Lat: 0.0", this);
 
@@ -41,10 +41,13 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addWidget(m_fpsLabel, 0, 0, Qt::AlignTop | Qt::AlignLeft);
     mainLayout->addWidget(m_tempLabel, 0, 0, Qt::AlignTop | Qt::AlignRight);
     mainLayout->addWidget(m_kmLabel, 0, 0, Qt::AlignBottom | Qt::AlignLeft);
-    mainLayout->addWidget(m_lonlabel, 0, 0, Qt::AlignBottom | Qt::AlignRight);
+
+    //cria o layout vertical para as coordenadas
     QVBoxLayout *coordLayout = new QVBoxLayout;
+    //adiciona os labels da lar e lon apenas a este layout vertical
     coordLayout->addWidget(m_latLabel);
     coordLayout->addWidget(m_lonlabel);
+    //adiciona o layout vertical inteiro ao canto inferior direito
     mainLayout->addLayout(coordLayout, 0, 0, Qt::AlignBottom | Qt::AlignRight);
 
     //Define o layout principal para a janela

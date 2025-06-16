@@ -16,16 +16,16 @@ chunk::chunk() :
 chunk::~chunk() {}
 
 chunk::chunk(chunk&& other) noexcept(true)
-    : m_chunkGridX(other.m_chunkGridX),
+:   m_chunkGridX(other.m_chunkGridX),
     m_chunkGridZ(other.m_chunkGridZ),
+    m_indexCount(other.m_indexCount),
+    m_vertexCount(other.m_vertexCount),
+    m_currentResolution(other.m_currentResolution),
+    m_currentLOD(other.m_currentLOD),
     m_vao(std::move(other.m_vao)),         // Move a propriedade do unique_ptr
     m_vbo(std::move(other.m_vbo)),         // Move a propriedade do unique_ptr
     m_ebo(std::move(other.m_ebo)),         // Move a propriedade do unique_ptr
-    m_indexCount(other.m_indexCount),
-    m_vertexCount(other.m_vertexCount),
-    m_modelMatrix(std::move(other.m_modelMatrix)), // QMatrix4x4 também suporta movimento
-    m_currentResolution(other.m_currentResolution),
-    m_currentLOD(other.m_currentLOD)
+    m_modelMatrix(std::move(other.m_modelMatrix)) // QMatrix4x4 também suporta movimento
 {
     // Deixa o objeto 'other' em um estado válido, mas "vazio" ou resetado,
     // para que seu destrutor não tente liberar recursos que foram movidos.
@@ -35,7 +35,6 @@ chunk::chunk(chunk&& other) noexcept(true)
     other.m_vertexCount = 0;
     other.m_currentResolution = 0;
     other.m_currentLOD = -1;
-    // other.m_modelMatrix.setToIdentity(); // Opcional, já que foi movida
     // Os objetos m_vao, m_vbo, m_ebo em 'other' agora estão em um estado "movido de"
     // (geralmente inválido para uso, mas seguro para destruição).
     // qInfo() << "Chunk Move Constructed";
@@ -44,23 +43,17 @@ chunk::chunk(chunk&& other) noexcept(true)
 chunk& chunk::operator=(chunk&& other) noexcept(true) {
     if (this != &other) { // Proteção contra auto-atribuição (ex: c = std::move(c);)
         // Liberar recursos existentes deste objeto (this)
-        // Se m_vao, m_vbo, m_ebo estivessem ativos, seus destrutores seriam chamados
-        // quando são sobrescritos pelas operações de movimento abaixo.
-        // Se você quiser ser explícito sobre a liberação antes da atribuição:
-        //if (m_vao.isCreated()) m_vao.destroy();
-        //if (m_vbo.isCreated()) m_vbo.destroy();
-        //if (m_ebo.isCreated()) m_ebo.destroy();
         // Mover os dados de 'other' para 'this'
         m_chunkGridX = other.m_chunkGridX;
         m_chunkGridZ = other.m_chunkGridZ;
+        m_indexCount = other.m_indexCount;
+        m_vertexCount = other.m_vertexCount;
+        m_currentResolution = other.m_currentResolution;
+        m_currentLOD = other.m_currentLOD;
         m_vao = std::move(other.m_vao);
         m_vbo = std::move(other.m_vbo);
         m_ebo = std::move(other.m_ebo);
-        m_indexCount = other.m_indexCount;
-        m_vertexCount = other.m_vertexCount;
         m_modelMatrix = std::move(other.m_modelMatrix);
-        m_currentResolution = other.m_currentResolution;
-        m_currentLOD = other.m_currentLOD;
         // Resetar o objeto 'other'
         other.m_chunkGridX = 0;
         other.m_chunkGridZ = 0;
@@ -68,37 +61,23 @@ chunk& chunk::operator=(chunk&& other) noexcept(true) {
         other.m_vertexCount = 0;
         other.m_currentResolution = 0;
         other.m_currentLOD = -1;
-        // other.m_modelMatrix.setToIdentity();
     }
     // qInfo() << "Chunk Move Assigned";
     return *this;
 }
 
-void chunk::init(int cX, int cZ, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
-    m_chunkGridX = cX;
-    m_chunkGridZ = cZ;
-    float worldX = static_cast<float>(m_chunkGridX * CHUNK_SIZE);
-    float worldZ = static_cast<float>(m_chunkGridZ * CHUNK_SIZE);
-    m_modelMatrix.setToIdentity();
-    m_modelMatrix.translate(worldX, 0.0f, worldZ);
-    setLOD(0); //Define o LOD inicial, que definira o m_currentResolution
-    generateMesh(m_currentResolution, terrainShaderProgram, glFuncs);
-}
+//Função de calculo pesado (CPU) - pode ser executada em qualquer thread
+chunk::MeshData chunk::generateMeshData(int cX, int cZ, int resolution)
+{
+    MeshData data;
+    data.chunkGridX = cX;
+    data.chunkGridZ = cZ;
+    data.resolution = resolution;
 
-void chunk::generateMesh(int resolution, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
-    if(!glFuncs) {
-        qWarning() << "generateMesh called with null QOpenGlFunctions pointer.";
-        return;
-    }
-    // 1. GERAÇÃO DOS DADOS (como antes)
-    m_vao.reset(); m_vbo.reset(); m_ebo.reset();
-    m_currentResolution = resolution;
-    if (resolution <= 1) return;
+    if (resolution <= 1) return data;
 
-    std::vector<Vertex> vertices;
-    vertices.reserve(static_cast<size_t>(resolution) * static_cast<size_t>(resolution));
-    std::vector<GLuint> indices;
-    indices.reserve(static_cast<size_t>(resolution - 1) * static_cast<size_t>(resolution - 1) * 6);
+    data.vertices.reserve(static_cast<size_t>(resolution) * static_cast<size_t>(resolution));
+    data.indices.reserve(static_cast<size_t>(resolution - 1) * static_cast<size_t>(resolution - 1) * 6);
     float step = static_cast<float>(CHUNK_SIZE) / (resolution - 1);
 
     for (int r = 0; r < resolution; ++r) {
@@ -106,63 +85,87 @@ void chunk::generateMesh(int resolution, QOpenGLShaderProgram* terrainShaderProg
             Vertex v;
             float localX = c * step;
             float localZ = r * step;
-            float noise_coord_x = (static_cast<float>(m_chunkGridX * CHUNK_SIZE)) + localX;
-            float noise_coord_z = (static_cast<float>(m_chunkGridZ * CHUNK_SIZE)) + localZ;
+            float noise_coord_x (static_cast<float>(cX * CHUNK_SIZE) + localX);
+            float noise_coord_z (static_cast<float>(cZ * CHUNK_SIZE) + localZ);
             v.position = QVector3D(localX, NoiseUtils::getHeight(noise_coord_x, noise_coord_z), localZ);
+
+            //Logica da normal
             float offset_norm = 0.1f;
             float hL = NoiseUtils::getHeight(noise_coord_x - offset_norm, noise_coord_z);
             float hR = NoiseUtils::getHeight(noise_coord_x + offset_norm, noise_coord_z);
             float hD = NoiseUtils::getHeight(noise_coord_x, noise_coord_z - offset_norm);
             float hU = NoiseUtils::getHeight(noise_coord_x, noise_coord_z + offset_norm);
             v.normal = QVector3D(hL - hR, 2.0f * offset_norm, hD - hU).normalized();
-            vertices.push_back(v);
+            data.vertices.push_back(v);
         }
     }
+
     for (int r = 0; r < resolution - 1; ++r) {
         for (int c = 0; c < resolution - 1; ++c) {
             GLuint topLeft = static_cast<GLuint>(r * resolution + c);
             GLuint topRight = topLeft + 1;
             GLuint bottomLeft = static_cast<GLuint>((r + 1) * resolution + c);
             GLuint bottomRight = bottomLeft + 1;
-            indices.push_back(topLeft);
-            indices.push_back(bottomLeft);
-            indices.push_back(topRight);
-            indices.push_back(topRight);
-            indices.push_back(bottomLeft);
-            indices.push_back(bottomRight);
+            data.indices.push_back(topLeft);
+            data.indices.push_back(bottomLeft);
+            data.indices.push_back(topRight);
+            data.indices.push_back(topRight);
+            data.indices.push_back(bottomLeft);
+            data.indices.push_back(bottomRight);
         }
     }
+    return data;
+}
 
-    m_vertexCount = static_cast<int>(vertices.size());
-    m_indexCount = static_cast<int>(indices.size());
-    if (m_indexCount == 0) return;
-    // 2. CONFIGURAÇÃO DOS BUFFERS OPENGL (A PARTE CORRIGIDA)
+//função de upload rapido (GPU) - deve ser executada na thread principal
+void chunk::uploadMeshData(const chunk::MeshData& data, QOpenGLFunctions* glFuncs)
+{
+    if (!glFuncs || data.indices.empty()) {
+        return;
+    }
+
+    //Limpa os buffers antigos antes de criar os novo
+    m_vao.reset();
+    m_vbo.reset();
+    m_ebo.reset();
+
+    m_currentResolution = data.resolution;
+    m_indexCount = static_cast<int>(data.indices.size());
+    m_vertexCount = static_cast<int>(data.vertices.size());
+
+    //cria e configura os objetos opengl
     m_vao = std::make_unique<QOpenGLVertexArrayObject>();
     m_vao->create();
-    m_vao->bind(); // <<-- VAO vinculado
-    // Configura o VBO (dados dos vértices)
+    m_vao->bind();
+
     m_vbo = std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
     m_vbo->create();
     m_vbo->bind();
-    m_vbo->allocate(vertices.data(), m_vertexCount * sizeof(Vertex));
-    // Configura os atributos do vértice.
-    // Isso diz ao VAO como interpretar os dados do VBO que acabamos de vincular.
-    glFuncs->glEnableVertexAttribArray(0); // location = 0 (position)
-    glFuncs->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+    m_vbo->allocate(data.vertices.data(), m_vertexCount * sizeof(Vertex));
 
-    glFuncs->glEnableVertexAttribArray(1); // location = 1 (normal)
+    glFuncs->glEnableVertexAttribArray(0);
+    glFuncs->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+    glFuncs->glEnableVertexAttribArray(1);
     glFuncs->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    // Configura o EBO (índices)
-    // O VAO também "lembra" qual EBO está vinculado enquanto ele (o VAO) está ativo.
+
     m_ebo = std::make_unique<QOpenGLBuffer>(QOpenGLBuffer::IndexBuffer);
     m_ebo->create();
     m_ebo->bind();
-    m_ebo->allocate(indices.data(), m_indexCount * sizeof(GLuint));
-    // 3. LIBERA OS VÍNCULOS (BOA PRÁTICA)
-    m_vao->release(); // Libera o VAO primeiro
-    // Opcional, mas limpo: desvincular os outros buffers depois que o VAO já guardou o estado.
+    m_ebo->allocate(data.indices.data(), m_indexCount * sizeof(GLuint));
+
+    m_vao->release();
     m_vbo->release();
     m_ebo->release();
+}
+
+void chunk::init(int cX, int cZ, QOpenGLFunctions *glFuncs) {
+    m_chunkGridX = cX;
+    m_chunkGridZ = cZ;
+    float worldX = static_cast<float>(m_chunkGridX * CHUNK_SIZE);
+    float worldZ = static_cast<float>(m_chunkGridZ * CHUNK_SIZE);
+    m_modelMatrix.setToIdentity();
+    m_modelMatrix.translate(worldX, 0.0f, worldZ);
+    setLOD(1); //Define o LOD inicial, que definira o m_currentResolution
 }
 
 void chunk::setLOD(int lodLevel) {
@@ -197,7 +200,7 @@ void chunk::renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFuncti
     lineQuadVao->release();
 }
 
-void chunk::recycle(int cX,int cZ, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
+void chunk::recycle(int cX,int cZ) {
     //Esta função reutiliza o chunk em uma nova posição
     m_chunkGridX = cX;
     m_chunkGridZ = cZ;
@@ -205,10 +208,4 @@ void chunk::recycle(int cX,int cZ, QOpenGLShaderProgram* terrainShaderProgram, Q
     float worldZ = static_cast<float>(m_chunkGridZ * CHUNK_SIZE);
     m_modelMatrix.setToIdentity();
     m_modelMatrix.translate(worldX, 0.0f, worldZ);
-    //Força o LOD a ser reavaliado. poderiamos simplesmente gerar com alta resolução
-    //ou manter o LOD anterior para evit "pop-in" de geometria. vamos gerar com a resolução atual.
-    if(m_currentResolution == 0) {
-        setLOD(0);
-    }
-    generateMesh(m_currentResolution, terrainShaderProgram, glFuncs);
 }

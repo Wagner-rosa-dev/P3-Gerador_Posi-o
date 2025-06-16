@@ -11,6 +11,7 @@ CONFIG += c++17
 SOURCES += \
     camera.cpp \
     chunk.cpp \
+    chunkworker.cpp \
     main.cpp \
     mainwindow.cpp \
     myglwidget.cpp \
@@ -21,6 +22,7 @@ SOURCES += \
 HEADERS += \
     camera.h \
     chunk.h \
+    chunkworker.h \
     mainwindow.h \
     myglwidget.h \
     noiseutils.h \
