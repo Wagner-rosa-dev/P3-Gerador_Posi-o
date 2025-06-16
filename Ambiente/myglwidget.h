@@ -27,6 +27,7 @@ signals:
     void fpsUpdated(int fps);
     void tempUpdated(float temp);
     void kmUpdated(float km);
+    void coordinatesUpdate(float lon, float lat);
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -35,6 +36,7 @@ protected:
 private slots:
     void gameTick();
     void onSpeedUpdate(float newSpeed); //slot para receber a velocidade
+    void onSteeringUpdate(int steeringValue);
 private:
     void setupLineQuadVAO();
     void setupTractorGL();
@@ -56,5 +58,6 @@ private:
     QOpenGLShaderProgram m_tractorShaderProgram;
     SpeedController *m_speedController;
     float m_tractorSpeed;
+    int m_steeringValue;
 };
 #endif // MYGLWIDGET_H

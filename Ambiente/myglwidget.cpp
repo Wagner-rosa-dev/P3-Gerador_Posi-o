@@ -115,7 +115,7 @@ void main() {
 )";
 
 MyGLWidget::MyGLWidget(QWidget *parent)
-    : QOpenGLWidget(parent), m_extraFunction(nullptr), m_tractorSpeed(0.0f) {
+    : QOpenGLWidget(parent), m_extraFunction(nullptr), m_tractorSpeed(0.0f), m_steeringValue(50) {
     connect(&m_timer, &QTimer::timeout, this, &MyGLWidget::gameTick);
     m_timer.start(16); // Aproximadamente 60 FPS
     setFocusPolicy(Qt::StrongFocus);
@@ -124,6 +124,8 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     m_speedController = new SpeedController(this);
     //Conecta o sinal da classe controladora ao novo slot
     connect(m_speedController, &SpeedController::speedUpdate, this, &MyGLWidget::onSpeedUpdate);
+    //conecta o segundo potenciometro
+    connect(m_speedController, &SpeedController::steeringUpdate, this, &MyGLWidget::onSteeringUpdate);
     //Inicia a escuta, a porta pode variar sempre verificar no linus qual a porta da usb
     m_speedController->startListening("/dev/ttyUSB0");
 }
@@ -335,6 +337,21 @@ void MyGLWidget::gameTick() {
         m_tempReadTimer.restart();
     }
 
+    //logica de direção (volante)
+    const int deadZone = 2; //Zona morta no centro (48-52 nao faz nada)
+    const float maxTurnRate = 2.0f; //Graus por frame na virada maxima
+
+    if (m_steeringValue < 50 - deadZone) { // virando para a esquerda
+        //normaliza o valor de 0 a 1(0 perto do centro, 1 na virada maxima)
+        float turnFactor = (float)(50 - m_steeringValue) / (50.0f);
+        m_tractorRotation -= maxTurnRate * turnFactor;
+    } else if (m_steeringValue > 50 + deadZone) { // virando para a direita
+        float turnFactor = (float)(m_steeringValue - 50) / (50.0f);
+        m_tractorRotation += maxTurnRate * turnFactor;
+    }
+
+
+
     //nova logica de movimento automatico
     if(m_tractorSpeed > 0.05f) {
         //Usamos um pequeno "dead zone" para evitar movimento por ruido
@@ -355,6 +372,7 @@ void MyGLWidget::gameTick() {
 
     float speedkm = m_tractorSpeed * 3.6f;
     emit kmUpdated(speedkm);
+    emit coordinatesUpdate(m_tractorPosition.x(), m_tractorPosition.z());
     update(); // Reagenda paintGL()
 }
 
@@ -380,21 +398,15 @@ void MyGLWidget::setupTractorGL() {
 }
 
 void MyGLWidget::keyPressEvent(QKeyEvent *event) {
-    float rotateSpeed = 5.0f;
-
-    float angleRad = qDegreesToRadians(m_tractorRotation);
-    QVector3D tractorForward(sin(angleRad), 0.0f, -cos(angleRad));
-
-    switch(event->key()) {
-    case Qt::Key_A: m_tractorRotation -= rotateSpeed; break;
-    case Qt::Key_D: m_tractorRotation += rotateSpeed; break;
-    default: QOpenGLWidget::keyPressEvent(event); return;
-    }
-    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+    QOpenGLWidget::keyPressEvent(event);
 }
 
 void MyGLWidget::onSpeedUpdate(float newSpeed)
 {
     //simplesmente atualiza a variavel de velocidade da classe
     m_tractorSpeed = newSpeed;
+}
+
+void MyGLWidget::onSteeringUpdate(int steeringValue) {
+    m_steeringValue = steeringValue;
 }

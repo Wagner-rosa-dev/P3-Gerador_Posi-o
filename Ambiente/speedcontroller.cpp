@@ -33,14 +33,23 @@ void SpeedController::startListening(const QString &portName)
 
 void SpeedController::handleReadyRead()
 {
-    //Le todo os dados disponiveis, que podem conter multiplas linhas
     while(m_serialPort->canReadLine()) {
-        QByteArray line = m_serialPort->readLine().trimmed(); //.trimmed() remove \n, \r etc
-        if (!line.isEmpty()) {
-            bool ok;
-            float speed = line.toFloat(&ok);
-            if (ok) {
-                emit speedUpdate(speed); //emite o sinal com o novo valor
+        QByteArray line = m_serialPort->readLine().trimmed();
+        if (line.isEmpty()) continue;
+
+        //Separa a string pela virgula
+        QList<QByteArray> parts = line.split(',');
+
+        //Verifica se temos exatamente 2 partes (velocidade e direção)
+        if (parts.size() == 2) {
+            bool speedOk, steeringOk;
+            float speed = parts[0].toFloat(&speedOk);
+            int steering = parts[1].toInt(&steeringOk);
+
+            if (speedOk && steeringOk) {
+                //emite os dois sinais com seus respectivos valores
+                emit speedUpdate(speed);
+                emit steeringUpdate(steering);
             }
         }
     }

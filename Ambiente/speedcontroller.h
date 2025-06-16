@@ -18,6 +18,7 @@ public slots:
 signals:
     //Sinal emitido sempre que uma nova velocidade valida é recebida
     void speedUpdate(float newSpeed);
+    void steeringUpdate(int steeringValue);
 
 private slots:
     void handleReadyRead();
