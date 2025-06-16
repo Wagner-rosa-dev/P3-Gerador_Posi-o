@@ -49,7 +49,7 @@ void terrainmanager::init(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLSha
     recenterGrid(0, 0);
 }
 
-void terrainmanager::update(const QVector3D& cameraPos, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions * glFuncs) {
+void terrainmanager::update(const QVector3D& cameraPos) {
     // Verifica se o centro da grade precisa mudar (logica de terreno infinito)
     int cameraChunkX = static_cast<int>(std::floor(cameraPos.x() / CHUNK_SIZE));
     int cameraChunkZ = static_cast<int>(std::floor(cameraPos.z() / CHUNK_SIZE));
@@ -61,13 +61,25 @@ void terrainmanager::update(const QVector3D& cameraPos, QOpenGLShaderProgram* te
     for (int i = 0; i < GRID_SIZE; ++i) {
         for (int j = 0; j < GRID_SIZE; ++j){
             chunk& currentChunk = m_chunks[i][j];
+            int currentLOD = currentChunk.getLOD();
+            int desiredLOD = currentLOD;
+
             float distanceToChunk = cameraPos.distanceToPoint(currentChunk.getCenterPosition());
 
-            int desiredLOD = (distanceToChunk > LOD_DISTANCE_THRESHOLD) ? 1 : 0;
-            if (currentChunk.getLOD() != desiredLOD) {
+            //logica de histerese
+            if (currentLOD == 1 && distanceToChunk < LOD_DISTANCE_THRESHOLD - LOD_HYSTERESIS_BUFFER) {
+                //se o chunk esta em baixa resolução, ele so muda para alta
+                //se entrar bem na zona de alta resolução
+                desiredLOD = 0;
+            } else if (currentLOD == 0 && distanceToChunk > LOD_DISTANCE_THRESHOLD + LOD_HYSTERESIS_BUFFER) {
+                //se o chunk esta em alta resolução, ele so muda para baixa
+                //se sair bem da zona de alta resolução
+                desiredLOD = 1;
+            }
+
+            if (currentLOD != desiredLOD) {
                 currentChunk.setLOD(desiredLOD);
-                int newRes = currentChunk.getLOD() == 0 ? HIGH_RES : LOW_RES;
-                //dispara o pedida de geração para chunk que mudou de LOD
+                int newRes = (desiredLOD == 0) ? HIGH_RES : LOW_RES;
                 emit requestMeshGeneration(currentChunk.chunkGridX(), currentChunk.chunkGridZ(), newRes);
             }
         }
@@ -125,8 +137,8 @@ void terrainmanager::onMeshReady(int chunkX, int chunkZ, const chunk::MeshData& 
 
     //Verifica se o chunk ainda pertence a grade atual(ele pode ter saido de vista)
     if(grid_i >= 0 && grid_i < GRID_SIZE && grid_j >= 0 && grid_j < GRID_SIZE) {
-        //encontra o chunk e chama a função de upload rapido
         chunk& targetChunk = m_chunks[grid_i][grid_j];
-        targetChunk.uploadMeshData(meshData, m_glFuncsRef);
+        // apenas armazena os dados, nao faz upload para a gpu aqui
+        targetChunk.setPendingMeshData(meshData);
     }
 }

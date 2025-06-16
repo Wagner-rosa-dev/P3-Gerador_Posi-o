@@ -61,6 +61,8 @@ public:
 
     int chunkGridX() const { return m_chunkGridX; }
     int chunkGridZ() const { return m_chunkGridZ; }
+
+    void setPendingMeshData(const MeshData& data);
 private:
     int m_chunkGridX;
     int m_chunkGridZ;
@@ -72,5 +74,8 @@ private:
     std::unique_ptr<QOpenGLBuffer> m_vbo;
     std::unique_ptr<QOpenGLBuffer> m_ebo;
     QMatrix4x4 m_modelMatrix;
+
+    bool m_hasPendingMesh;
+    MeshData m_pendingMeshData;
 };
 #endif // CHUNK_H

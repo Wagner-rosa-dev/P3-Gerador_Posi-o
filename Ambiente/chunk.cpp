@@ -10,7 +10,8 @@ chunk::chunk() :
     m_vertexCount(0),
     //m_modelmatrix e minicializada como identidade por padrao
     m_currentResolution(0),
-    m_currentLOD(-1)
+    m_currentLOD(-1),
+    m_hasPendingMesh(false)
 {}
 
 chunk::~chunk() {}
@@ -183,7 +184,22 @@ QVector3D chunk::getCenterPosition() const {
     return QVector3D(worldX, NoiseUtils::getHeight(worldX, worldZ), worldZ);
 }
 
+void chunk::setPendingMeshData(const MeshData& data) {
+    m_pendingMeshData = data;
+    m_hasPendingMesh = true;
+}
+
+
 void chunk::render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
+    //se ha uma malha pendente, faça o upload agora, com o contexto ativo
+    if (m_hasPendingMesh) {
+        uploadMeshData(m_pendingMeshData, glFuncs);
+        m_pendingMeshData = {}; //limpa os dados da cpu
+        m_hasPendingMesh = false;
+    }
+
+
+
     if (m_indexCount == 0 || !m_vao || !m_vao->isCreated()) { return; }
 
     terrainShaderProgram->setUniformValue("modelMatrix", m_modelMatrix);

@@ -20,7 +20,7 @@ public:
     static const int GRID_SIZE = 9; // Uma grade 9x9 como exemplo
 
     void init(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo, QOpenGLFunctions *glFuncs);
-    void update(const QVector3D& cameraPos, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs);
+    void update(const QVector3D& cameraPos);
     void render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions *glFuncs);
 
 signals:
@@ -42,6 +42,7 @@ private:
     QOpenGLFunctions* m_glFuncsRef;
 
     const float LOD_DISTANCE_THRESHOLD = CHUNK_SIZE * 2.5f;
+    const float LOD_HYSTERESIS_BUFFER = 5.0f;
 
     //variaveis para gerenciar a thread
     QThread* m_workerThread;

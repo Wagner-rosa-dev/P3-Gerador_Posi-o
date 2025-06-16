@@ -8,6 +8,7 @@
 #include <QTextStream>
 #include <QTime>
 #include <QElapsedTimer>
+#include <cmath>
 
 //Constantes com o código GLSL dos shaders
 const char* terrainVertexShaderSource = R"(#version 300 es
@@ -115,7 +116,13 @@ void main() {
 )";
 
 MyGLWidget::MyGLWidget(QWidget *parent)
-    : QOpenGLWidget(parent), m_extraFunction(nullptr), m_tractorSpeed(0.0f), m_steeringValue(50) {
+    : QOpenGLWidget(parent),
+    m_tractorRotation(0),
+    m_extraFunction(nullptr),
+    m_tractorSpeed(0.0f),
+    m_steeringValue(50)
+
+{
     connect(&m_timer, &QTimer::timeout, this, &MyGLWidget::gameTick);
     m_timer.start(16); // Aproximadamente 60 FPS
     setFocusPolicy(Qt::StrongFocus);
@@ -230,9 +237,8 @@ void MyGLWidget::paintGL() {
     bool terrainShaderOk = m_terrainShaderProgram.isLinked();
     bool lineShaderOk = m_lineShaderProgram.isLinked();
 
-    m_terrainManager.update(m_camera.position(),
-                            terrainShaderOk ? &m_terrainShaderProgram : nullptr,
-                            this);
+    m_terrainManager.update(m_camera.position());
+
     // Renderiza o terreno
     if (terrainShaderOk) {
         m_terrainShaderProgram.bind();
@@ -242,9 +248,25 @@ void MyGLWidget::paintGL() {
         m_terrainShaderProgram.setUniformValue("lightDirection", sunDirection);
         m_terrainShaderProgram.setUniformValue("lightColor", QVector3D(1.0f, 1.0f, 1.0f));
         m_terrainShaderProgram.setUniformValue("objectBaseColor", QVector3D(0.4f, 0.6f, 0.2f)); //Verde claro
+
+        //pede para o manager renderizar apenas o terreno
+        m_terrainManager.render(&m_terrainShaderProgram, nullptr, this);
+
+        m_terrainShaderProgram.release();
     }
 
-    m_terrainManager.render(terrainShaderOk ? &m_terrainShaderProgram : nullptr, lineShaderOk ? &m_lineShaderProgram : nullptr, this);
+    //renderiza as bordas dos chunks
+    if (lineShaderOk) {
+        m_lineShaderProgram.bind();
+        m_lineShaderProgram.setUniformValue("projectionMatrix", m_camera.projectionMatrix());
+        m_lineShaderProgram.setUniformValue("viewMatrix", m_camera.viewMatrix());
+
+        //pede para o manager renderizar apenas as bordas
+        m_terrainManager.render(nullptr, &m_lineShaderProgram, this);
+
+        m_lineShaderProgram.release();
+    }
+
 
     //Renderiza o trator
     if (m_tractorShaderProgram.isLinked()) {
@@ -404,7 +426,13 @@ void MyGLWidget::keyPressEvent(QKeyEvent *event) {
 void MyGLWidget::onSpeedUpdate(float newSpeed)
 {
     //simplesmente atualiza a variavel de velocidade da classe
-    m_tractorSpeed = newSpeed;
+    if (std::isfinite(newSpeed)) {
+        m_tractorSpeed = newSpeed;
+    } else {
+        //se receber lixo, zeramos a velocidade para segurança
+        m_tractorSpeed = 0.0f;
+        qWarning() << "Recebido valor de velocidade invalido (inf ou nan)";
+    }
 }
 
 void MyGLWidget::onSteeringUpdate(int steeringValue) {

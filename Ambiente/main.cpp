@@ -2,10 +2,13 @@
 #include <QSurfaceFormat>
 #include <QApplication>
 #include <QDebug>
+#include "chunk.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    qRegisterMetaType<chunk::MeshData>("chunk::MeshData");
 
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGLES);
