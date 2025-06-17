@@ -88,8 +88,10 @@ precision mediump float; // Define a precisão padrão para floats
 
 out vec4 FragColor;
 
+uniform vec4 lineColor;
+
 void main() {
-    FragColor = vec4(0.5, 0.5, 0.5, 1.0); // Cor cinza para as bordas
+    FragColor = lineColor; // Cor cinza para as bordas
 }
 )";
 
@@ -194,11 +196,23 @@ void MyGLWidget::initializeGL() {
 }
 
 void MyGLWidget::setupLineQuadVAO() {
+
+    const float thickness = 0.10f; //controle a espessura da linha aqui
+    const float y_offset = 0.2f; //pequena elevação em relação ao terreno para evitar z-fighting
+
+    const float s = CHUNK_SIZE;
+    const float t = thickness / 2.0f;
+
     GLfloat lineQuadVertices[] = {
-        0.0f, 0.0f, 0.0f,
-        CHUNK_SIZE, 0.0f, 0.0f,
-        CHUNK_SIZE, 0.0f, CHUNK_SIZE,
-        0.0f, 0.0f, CHUNK_SIZE
+        // duas bordas total de 12 vertices
+        // os cantos agora sao calculados para se encontrarem
+        //borda inferior
+        0.0f, y_offset, -t,      s, y_offset, -t,       s, y_offset, t,
+        0.0f, y_offset, -t,      s, y_offset, t,        0.0f, y_offset, t,
+        //Lado 2 (X=S)
+        s-t, y_offset, 0.0f,     s+t, y_offset, 0.0f,   s+t, y_offset, s,
+        s-t, y_offset, 0.0f,     s+t, y_offset, s,      s-t, y_offset, s,
+
     };
 
     m_lineQuadVao.create();
@@ -260,6 +274,8 @@ void MyGLWidget::paintGL() {
         m_lineShaderProgram.bind();
         m_lineShaderProgram.setUniformValue("projectionMatrix", m_camera.projectionMatrix());
         m_lineShaderProgram.setUniformValue("viewMatrix", m_camera.viewMatrix());
+
+        m_lineShaderProgram.setUniformValue("lineColor", QColor(255, 255, 0, 255));
 
         //pede para o manager renderizar apenas as bordas
         m_terrainManager.render(nullptr, &m_lineShaderProgram, this);

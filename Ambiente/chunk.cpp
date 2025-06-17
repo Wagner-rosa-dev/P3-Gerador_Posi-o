@@ -212,7 +212,7 @@ void chunk::renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFuncti
     if (!lineQuadVao || !lineQuadVao->isCreated()) return;
     lineShaderProgram->setUniformValue("modelMatrix", m_modelMatrix);
     lineQuadVao->bind();
-    glFuncs->glDrawArrays(GL_LINE_LOOP, 0, 4);
+    glFuncs->glDrawArrays(GL_TRIANGLES, 0, 12);
     lineQuadVao->release();
 }
 

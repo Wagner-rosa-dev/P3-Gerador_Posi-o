@@ -13,7 +13,7 @@
 #include <QTimer>
 #include <QKeyEvent>
 
-const int CHUNK_SIZE = 32;
+const int CHUNK_SIZE = 16;
 const int HIGH_RES = 65;
 const int LOW_RES = 17;
 
