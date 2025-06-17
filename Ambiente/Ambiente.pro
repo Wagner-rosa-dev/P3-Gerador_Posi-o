@@ -27,7 +27,8 @@ HEADERS += \
     myglwidget.h \
     noiseutils.h \
     speedcontroller.h \
-    terrainmanager.h
+    terrainmanager.h \
+    worldconfig.h
 
 FORMS += \
     myglwidget.ui

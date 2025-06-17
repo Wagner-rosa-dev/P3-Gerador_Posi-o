@@ -12,6 +12,7 @@
 #include "terrainmanager.h"
 #include <QElapsedTimer>
 #include "speedcontroller.h"
+#include "worldconfig.h"
 
 struct SceneMatrices {
     QMatrix4x4 projectionMatrix;
@@ -44,6 +45,7 @@ private:
     int m_frameCount;
     QTimer m_timer;
     camera m_camera;
+    WorldConfig m_worldConfig;
     terrainmanager m_terrainManager;
     QElapsedTimer m_fpsTime;
     QElapsedTimer m_tempReadTimer;

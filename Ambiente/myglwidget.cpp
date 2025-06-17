@@ -184,7 +184,7 @@ void MyGLWidget::initializeGL() {
 
     setupLineQuadVAO();
     setupTractorGL();
-    m_terrainManager.init(&m_terrainShaderProgram, &m_lineShaderProgram, &m_lineQuadVao, &m_lineQuadVbo, this);
+    m_terrainManager.init(&m_worldConfig, &m_terrainShaderProgram, &m_lineShaderProgram, &m_lineQuadVao, &m_lineQuadVbo, this);
 
     m_tractorPosition = QVector3D(16.0f, 0.0f, 16.0f);
     m_tractorRotation = 0.0f;
@@ -200,7 +200,7 @@ void MyGLWidget::setupLineQuadVAO() {
     const float thickness = 0.10f; //controle a espessura da linha aqui
     const float y_offset = 0.2f; //pequena elevação em relação ao terreno para evitar z-fighting
 
-    const float s = CHUNK_SIZE;
+    const float s = m_worldConfig.chunkSize;
     const float t = thickness / 2.0f;
 
     GLfloat lineQuadVertices[] = {

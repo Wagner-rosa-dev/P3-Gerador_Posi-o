@@ -13,9 +13,7 @@
 #include <QTimer>
 #include <QKeyEvent>
 
-const int CHUNK_SIZE = 16;
-const int HIGH_RES = 65;
-const int LOW_RES = 17;
+
 
 struct Vertex {
     QVector3D position;
@@ -45,9 +43,9 @@ public:
     chunk& operator=(const chunk& other) = delete;
 
     void init(int cX, int cZ, QOpenGLFunctions *glFuncs);
-    void recycle(int cX, int cZ);
+    void recycle(int cX, int cZ, int chunkSize);
 
-    static MeshData generateMeshData(int cX, int cZ, int resolution);
+    static MeshData generateMeshData(int cX, int cZ, int resolution, int chunkSize);
 
     void uploadMeshData(const MeshData& data, QOpenGLFunctions* glFuncs);
 
@@ -56,7 +54,7 @@ public:
     void renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions* glFuncs, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo);
     void setLOD(int lodLevel);
     int getLOD() const {return m_currentLOD; }
-    QVector3D getCenterPosition() const;
+    QVector3D getCenterPosition(int chunkSize) const;
     QMatrix4x4 modelMatrix() const { return m_modelMatrix; }
 
     int chunkGridX() const { return m_chunkGridX; }

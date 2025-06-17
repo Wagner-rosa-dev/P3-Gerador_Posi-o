@@ -3,23 +3,25 @@
 
 #include <QObject>
 #include "chunk.h"
+#include <QRunnable>
+#include "worldconfig.h"
 
-class ChunkWorker : public QObject
+class terrainmanager;
+
+class ChunkWorker : public QRunnable
 {
-    Q_OBJECT // Macro obrigatorio para sinais e slots
-
 public:
-    explicit ChunkWorker(QObject *parent = nullptr);
+    ChunkWorker(int chunkX,int chunkZ, int resolution, const WorldConfig* config, terrainmanager* manager);
 
-public slots:
-    // este e o gatilho que a thread pincipal usara para pedir a geração de um chunk
-    //ele precisa receber todas as informações necessarias para o calculo
-    void generateChunkMesh(int chunkX, int chunkZ, int resolution);
+    void run() override;
 
-signals:
-    //este e o anuncio que o trabalho fara quando terminar
-    //ele envia de volta os dados da malha prontos para a thread principal
-    void meshReady(int chunkX, int chunkZ, const chunk::MeshData& meshData);
+private:
+    int m_chunkX;
+    int m_chunkZ;
+    int m_resolution;
+    const WorldConfig* m_config; // ponteiro do config
+    terrainmanager* m_manager; // ponteiro para quem nos chamou
+
 };
 
 #endif // CHUNKWORKER_H

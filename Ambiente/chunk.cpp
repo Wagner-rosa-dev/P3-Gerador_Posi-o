@@ -1,6 +1,7 @@
 #include "chunk.h"
 #include "noiseutils.h"
 #include <QDebug>
+#include "worldconfig.h"
 
 chunk::chunk() :
     m_chunkGridX(0),
@@ -68,7 +69,7 @@ chunk& chunk::operator=(chunk&& other) noexcept(true) {
 }
 
 //Função de calculo pesado (CPU) - pode ser executada em qualquer thread
-chunk::MeshData chunk::generateMeshData(int cX, int cZ, int resolution)
+chunk::MeshData chunk::generateMeshData(int cX, int cZ, int resolution, int chunkSize)
 {
     MeshData data;
     data.chunkGridX = cX;
@@ -79,15 +80,15 @@ chunk::MeshData chunk::generateMeshData(int cX, int cZ, int resolution)
 
     data.vertices.reserve(static_cast<size_t>(resolution) * static_cast<size_t>(resolution));
     data.indices.reserve(static_cast<size_t>(resolution - 1) * static_cast<size_t>(resolution - 1) * 6);
-    float step = static_cast<float>(CHUNK_SIZE) / (resolution - 1);
+    float step = static_cast<float>(chunkSize) / (resolution - 1);
 
     for (int r = 0; r < resolution; ++r) {
         for (int c = 0; c < resolution; ++c) {
             Vertex v;
             float localX = c * step;
             float localZ = r * step;
-            float noise_coord_x (static_cast<float>(cX * CHUNK_SIZE) + localX);
-            float noise_coord_z (static_cast<float>(cZ * CHUNK_SIZE) + localZ);
+            float noise_coord_x (static_cast<float>(cX * chunkSize) + localX);
+            float noise_coord_z (static_cast<float>(cZ * chunkSize) + localZ);
             v.position = QVector3D(localX, NoiseUtils::getHeight(noise_coord_x, noise_coord_z), localZ);
 
             //Logica da normal
@@ -158,7 +159,7 @@ void chunk::uploadMeshData(const chunk::MeshData& data, QOpenGLFunctions* glFunc
     m_vbo->release();
     m_ebo->release();
 }
-
+/*
 void chunk::init(int cX, int cZ, QOpenGLFunctions *glFuncs) {
     m_chunkGridX = cX;
     m_chunkGridZ = cZ;
@@ -168,19 +169,16 @@ void chunk::init(int cX, int cZ, QOpenGLFunctions *glFuncs) {
     m_modelMatrix.translate(worldX, 0.0f, worldZ);
     setLOD(1); //Define o LOD inicial, que definira o m_currentResolution
 }
+*/
 
 void chunk::setLOD(int lodLevel) {
     m_currentLOD = lodLevel;
-    if (lodLevel == 0) {
-        m_currentResolution = HIGH_RES;
-    } else {
-        m_currentResolution = LOW_RES;
-    }
 }
 
-QVector3D chunk::getCenterPosition() const {
-    float worldX = (static_cast<float>(m_chunkGridX) + 0.5f) * CHUNK_SIZE;
-    float worldZ = (static_cast<float>(m_chunkGridZ) + 0.5f) * CHUNK_SIZE;
+
+QVector3D chunk::getCenterPosition(int chunkSize) const {
+    float worldX = (static_cast<float>(m_chunkGridX) + 0.5f) * chunkSize;
+    float worldZ = (static_cast<float>(m_chunkGridZ) + 0.5f) * chunkSize;
     return QVector3D(worldX, NoiseUtils::getHeight(worldX, worldZ), worldZ);
 }
 
@@ -216,12 +214,12 @@ void chunk::renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFuncti
     lineQuadVao->release();
 }
 
-void chunk::recycle(int cX,int cZ) {
+void chunk::recycle(int cX,int cZ, int chunkSize) {
     //Esta função reutiliza o chunk em uma nova posição
     m_chunkGridX = cX;
     m_chunkGridZ = cZ;
-    float worldX = static_cast<float>(m_chunkGridX * CHUNK_SIZE);
-    float worldZ = static_cast<float>(m_chunkGridZ * CHUNK_SIZE);
+    float worldX = static_cast<float>(m_chunkGridX * chunkSize);
+    float worldZ = static_cast<float>(m_chunkGridZ * chunkSize);
     m_modelMatrix.setToIdentity();
     m_modelMatrix.translate(worldX, 0.0f, worldZ);
 }

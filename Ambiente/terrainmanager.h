@@ -9,6 +9,7 @@
 #include <QThread>
 
 class ChunkWorker;
+struct WorldConfig;
 
 class terrainmanager : public QObject { Q_OBJECT
 
@@ -17,15 +18,12 @@ public:
     terrainmanager();
     ~terrainmanager();
 
-    static const int GRID_SIZE = 9; // Uma grade 9x9 como exemplo
 
-    void init(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo, QOpenGLFunctions *glFuncs);
+
+    void init(const WorldConfig* config, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo, QOpenGLFunctions *glFuncs);
     void update(const QVector3D& cameraPos);
     void render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions *glFuncs);
 
-signals:
-    //sinal para pedir ao trabalhor que here uma nova malha
-    void requestMeshGeneration(int chunkX, int chunkZ, int resolution);
 
 private slots:
     //slota para receber a malha pronta do trabalhador
@@ -34,6 +32,7 @@ private slots:
 private:
     void recenterGrid(int newCenterX, int newCenterZ);
 
+    const WorldConfig* m_config;
     std::vector<std::vector<chunk>> m_chunks;
     int m_centerChunkX;
     int m_centerChunkZ;
@@ -41,12 +40,10 @@ private:
     QOpenGLBuffer* m_lineQuadVboRef;
     QOpenGLFunctions* m_glFuncsRef;
 
-    const float LOD_DISTANCE_THRESHOLD = CHUNK_SIZE * 2.5f;
+
     const float LOD_HYSTERESIS_BUFFER = 5.0f;
 
-    //variaveis para gerenciar a thread
-    QThread* m_workerThread;
-    ChunkWorker* m_worker;
+
 };
 
 #endif // TERRAINMANAGER_H
