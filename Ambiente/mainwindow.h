@@ -35,6 +35,7 @@ public:
     ~MainWindow();
 
 private slots:
+
     // Slot: updateFpsLabel
     // Descrição: Atualiza o texto do QLabel que exibe a taxa de quadros por segundo (FPS).
     // Parâmetros:
@@ -60,6 +61,9 @@ private slots:
     //   - lat: O valor float da latitude.
     void updateCoordinatesLabel(float lon, float lat);
 
+    //novo slot para o status de movimento
+    void updateMovementStatusLabel(const QString& status);
+
 private:
     // Membro: m_glWidget
     // Tipo: MyGLWidget*
@@ -70,22 +74,29 @@ private:
     // Tipo: QLabel*
     // Descrição: QLabel para exibir a taxa de quadros por segundo (FPS).
     QLabel *m_fpsLabel;
+
     // Membro: m_tempLabel
     // Tipo: QLabel*
     // Descrição: QLabel para exibir a temperatura da CPU.
     QLabel *m_tempLabel;
+
     // Membro: m_kmLabel
     // Tipo: QLabel*
     // Descrição: QLabel para exibir a velocidade do trator em Km/h.
     QLabel *m_kmLabel;
+
     // Membro: m_latLabel
     // Tipo: QLabel*
     // Descrição: QLabel para exibir a coordenada de latitude do trator.
     QLabel *m_latLabel;
+
     // Membro: m_lonlabel
     // Tipo: QLabel*
     // Descrição: QLabel para exibir a coordenada de longitude do trator.
     QLabel *m_lonlabel;
+
+    //novo label
+    QLabel *m_movementStatusLabel;
 };
 
 #endif // MAINWINDOW_H

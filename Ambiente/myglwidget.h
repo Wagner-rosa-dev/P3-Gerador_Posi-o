@@ -13,15 +13,18 @@
 #include <QElapsedTimer>        // Para medir o tempo (e.g., cálculo de FPS).
 #include "speedcontroller.h"    // Inclui a definição da classe SpeedController.
 #include "worldconfig.h"        // Inclui a estrutura WorldConfig.
+#include <QGeoCoordinate>
 
 // Estrutura: SceneMatrices
 // Descrição: Uma estrutura para agrupar as matrizes de projeção e visão da cena.
 //            Pode ser útil para passar essas matrizes juntas para funções ou shaders.
 struct SceneMatrices {
+
     // Membro: projectionMatrix
     // Tipo: QMatrix4x4
     // Descrição: A matriz de projeção da câmera, responsável por transformar coordenadas 3D em 2D.
     QMatrix4x4 projectionMatrix;
+
     // Membro: viewMatrix
     // Tipo: QMatrix4x4
     // Descrição: A matriz de visão da câmera, responsável por posicionar e orientar a câmera no mundo.
@@ -83,6 +86,9 @@ signals:
     //   - lat: O valor float da latitude.
     void coordinatesUpdate(float lon, float lat);
 
+    //novo sinal para status da linha reta/curva
+    void movementStatusUpdated(const QString& status);
+
 protected:
     // Método: initializeGL
     // Descrição: Chamado uma vez para configurar o contexto OpenGL e carregar recursos
@@ -130,7 +136,11 @@ private slots:
     //   - steeringValue: O novo valor de esterçamento recebido.
     void onSteeringUpdate(int steeringValue);
 
+    //novo slot para receber os dados GPS
+    void onGpsDataUpdate(const GpsData& data);
+
 private:
+
     // Método Privado: setupLineQuadVAO
     // Descrição: Configura o Vertex Array Object (VAO) e Vertex Buffer Object (VBO)
     //            para um quad simples que será usado para desenhar as bordas dos chunks.
@@ -139,6 +149,10 @@ private:
     // Método Privado: setupTractorGL
     // Descrição: Configura os shaders, VAO e VBO para renderizar o modelo do trator.
     void setupTractorGL();
+
+    void updateTractorPositionFromGps(const GpsData& data);
+
+    void checkMovementStatus();
 
     // Membro: m_tractorRotation
     // Tipo: float
@@ -203,6 +217,7 @@ private:
     // Tipo: QOpenGLBuffer
     // Descrição: VBO para desenhar as bordas dos chunks (compartilhado).
     QOpenGLBuffer m_lineQuadVbo;
+
     // Membro: m_tractorVbo
     // Tipo: QOpenGLBuffer
     // Descrição: VBO para o modelo 3D do trator.
@@ -212,10 +227,12 @@ private:
     // Tipo: QOpenGLShaderProgram
     // Descrição: Programa de shader para renderizar o terreno.
     QOpenGLShaderProgram m_terrainShaderProgram;
+
     // Membro: m_lineShaderProgram
     // Tipo: QOpenGLShaderProgram
     // Descrição: Programa de shader para renderizar as linhas (bordas dos chunks).
     QOpenGLShaderProgram m_lineShaderProgram;
+
     // Membro: m_tractorShaderProgram
     // Tipo: QOpenGLShaderProgram
     // Descrição: Programa de shader para renderizar o trator.
@@ -230,11 +247,22 @@ private:
     // Tipo: float
     // Descrição: A velocidade atual do trator, controlada externamente.
     float m_tractorSpeed;
+
     // Membro: m_steeringValue
     // Tipo: int
     // Descrição: O valor de esterçamento (direção) do trator, controlado externamente.
     //            Geralmente de um potenciômetro (0-100 ou similar).
     int m_steeringValue;
+
+
+    //Variaveis para o GPS
+    GpsData m_currentGpsData;
+    GpsData m_lastGpsData;
+    //precisaremos de um ponto de referencia para transformar lat\lon em X\Z do mundo
+    QGeoCoordinate m_referenceCoordinate;
+    bool m_hasReferenceCoordinate;
+    float m_currentHeading; // Rumo atual do trator (do GPS)
+
 };
 
 #endif // MYGLWIDGET_H

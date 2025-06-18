@@ -101,6 +101,7 @@ private:
     // Tipo: int
     // Descrição: A coordenada X da grade do chunk que está atualmente no centro da grade de renderização.
     int m_centerChunkX;
+
     // Membro: m_centerChunkZ
     // Tipo: int
     // Descrição: A coordenada Z da grade do chunk que está atualmente no centro da grade de renderização.
@@ -111,11 +112,13 @@ private:
     // Descrição: Referência (ponteiro) ao VAO compartilhado usado para desenhar as bordas dos chunks.
     //            Não possui a propriedade do objeto, apenas o utiliza.
     QOpenGLVertexArrayObject* m_lineQuadVaoRef;
+
     // Membro: m_lineQuadVboRef
     // Tipo: QOpenGLBuffer*
     // Descrição: Referência (ponteiro) ao VBO compartilhado usado para desenhar as bordas dos chunks.
     //            Não possui a propriedade do objeto, apenas o utiliza.
     QOpenGLBuffer* m_lineQuadVboRef;
+
     // Membro: m_glFuncsRef
     // Tipo: QOpenGLFunctions*
     // Descrição: Referência (ponteiro) para as funções OpenGL, obtidas do contexto OpenGL principal.

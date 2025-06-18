@@ -20,6 +20,7 @@ class terrainmanager;
 class ChunkWorker : public QRunnable
 {
 public:
+
     // Construtor: ChunkWorker
     // Descrição: Inicializa o worker com os dados necessários para gerar um chunk específico.
     //            Define `setAutoDelete(true)` para que o objeto seja automaticamente deletado
@@ -43,18 +44,22 @@ private:
     // Tipo: int
     // Descrição: A coordenada X do chunk que este worker é responsável por gerar.
     int m_chunkX;
+
     // Membro: m_chunkZ
     // Tipo: int
     // Descrição: A coordenada Z do chunk que este worker é responsável por gerar.
     int m_chunkZ;
+
     // Membro: m_resolution
     // Tipo: int
     // Descrição: A resolução da malha que será gerada para este chunk.
     int m_resolution;
+
     // Membro: m_config
     // Tipo: const WorldConfig*
     // Descrição: Ponteiro constante para a configuração global do mundo, contendo parâmetros como o tamanho do chunk.
     const WorldConfig* m_config;
+
     // Membro: m_manager
     // Tipo: terrainmanager*
     // Descrição: Ponteiro para o `terrainmanager` que iniciou este worker.

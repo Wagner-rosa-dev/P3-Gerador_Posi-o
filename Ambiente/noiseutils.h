@@ -11,6 +11,7 @@
 //            As funções são definidas como `inline` para permitir que o compilador as otimize,
 //            possivelmente inserindo o código diretamente no local da chamada para melhor performance.
 namespace NoiseUtils {
+
 // Função: getHeight
 // Descrição: Calcula e retorna a altura do terreno para uma dada coordenada no mundo (worldX, worldZ).
 //            Atualmente, retorna um valor fixo de 0.0f, mas é um placeholder para uma função
@@ -32,6 +33,7 @@ inline float getHeight(float worldX, float worldZ) {
 //   - worldZ: Coordenada Z no espaço do mundo.
 // Retorno: QVector3D - O vetor normal normalizado na coordenada especificada.
 inline QVector3D getNormal(float worldX, float worldZ) {
+
     float offset = 0.1f; // Pequeno deslocamento usado para amostrar a altura em pontos vizinhos.
     float hL = getHeight(worldX - offset, worldZ); // Altura à esquerda do ponto.
     float hR = getHeight(worldX - offset, worldZ); // Altura à direita do ponto (corrigido: deveria ser worldX + offset).

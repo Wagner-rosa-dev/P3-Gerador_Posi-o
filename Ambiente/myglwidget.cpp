@@ -152,7 +152,9 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     m_tractorRotation(0), // Inicializa a rotação do trator.
     m_extraFunction(nullptr), // Inicializa o ponteiro para funções extras OpenGL.
     m_tractorSpeed(0.0f), // Inicializa a velocidade do trator.
-    m_steeringValue(50) // Inicializa o valor de direção (centro).
+    m_steeringValue(50), // Inicializa o valor de direção (centro).
+    m_hasReferenceCoordinate(false), // inicializa como falso
+    m_currentHeading(0.0f) // rumo inicial
 
 {
     // Conecta o sinal `timeout` do `m_timer` ao slot `gameTick` deste objeto.
@@ -160,8 +162,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     connect(&m_timer, &QTimer::timeout, this, &MyGLWidget::gameTick);
     // Inicia o timer para disparar a cada 16 milissegundos, o que corresponde a aproximadamente 60 quadros por segundo (1000ms / 16ms = 62.5 FPS).
     m_timer.start(16);
-    // Define a política de foco do widget para Qt::StrongFocus, permitindo que ele receba eventos de teclado.
-    setFocusPolicy(Qt::StrongFocus);
+
 
     // Nova lógica do controlador:
     // Cria uma nova instância de SpeedController.
@@ -172,9 +173,11 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     // Conecta o sinal `steeringUpdate` do `m_speedController` ao slot `onSteeringUpdate` deste objeto.
     // Isso permite que MyGLWidget receba as atualizações de direção.
     connect(m_speedController, &SpeedController::steeringUpdate, this, &MyGLWidget::onSteeringUpdate);
+
+    connect(m_speedController, &SpeedController::gpsDataUpdate, this, &MyGLWidget::onGpsDataUpdate);
     // Inicia a escuta na porta serial especificada.
     // É importante verificar qual porta USB está sendo usada no Linux.
-    m_speedController->startListening("/dev/ttyUSB0");
+    m_speedController->startListening("/dev/ttyACM0");
 }
 
 /**
@@ -246,9 +249,8 @@ void MyGLWidget::initializeGL() {
     m_terrainManager.init(&m_worldConfig, &m_terrainShaderProgram, &m_lineShaderProgram, &m_lineQuadVao, &m_lineQuadVbo, this);
 
     // Define a posição inicial do trator e ajusta sua altura ao terreno.
-    m_tractorPosition = QVector3D(16.0f, 0.0f, 16.0f);
-    m_tractorRotation = 0.0f;
-    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+    m_tractorPosition = QVector3D(0.0f, 0.0f, 0.0f); //definindo uma posição inical
+    m_tractorRotation = 0.0f; // sera atualizado pelo gps (rumo)
 
     m_frameCount = 0; // Zera o contador de quadros para cálculo de FPS.
     m_fpsTime.start(); // Inicia o timer para medição de FPS.
@@ -497,41 +499,11 @@ void MyGLWidget::gameTick() {
         m_tempReadTimer.restart(); // Reinicia o timer de leitura de temperatura.
     }
 
-    // Lógica de direção (volante):
-    const int deadZone = 2; // Zona morta no centro do valor do potenciômetro (e.g., 48-52 não faz nada).
-    const float maxTurnRate = 2.0f; // Graus por quadro na virada máxima.
-
-    if (m_steeringValue < 50 - deadZone) { // Se o valor de esterçamento indica virar para a esquerda.
-        // Normaliza o valor do potenciômetro para um fator de 0 a 1 (0 perto do centro, 1 na virada máxima).
-        float turnFactor = (float)(50 - m_steeringValue) / (50.0f);
-        m_tractorRotation -= maxTurnRate * turnFactor; // Diminui a rotação do trator.
-    } else if (m_steeringValue > 50 + deadZone) { // Se o valor de esterçamento indica virar para a direita.
-        float turnFactor = (float)(m_steeringValue - 50) / (50.0f);
-        m_tractorRotation += maxTurnRate * turnFactor; // Aumenta a rotação do trator.
-    }
-
-    // Nova lógica de movimento automático:
-    if(m_tractorSpeed > 0.05f) { // Se a velocidade do trator é maior que um pequeno "dead zone" (para evitar ruído).
-        // Calcula a distância a ser movida neste quadro.
-        // Velocidade (unidade/segundo) * tempo do quadro (em segundos). Nosso timer é de 16ms, ou seja 0.016s.
-        float distranceThisFrame = m_tractorSpeed * (16.0f / 1000.0f);
-
-        // Pega o vetor para frente do trator com base na sua rotação atual.
-        float angleRad = qDegreesToRadians(m_tractorRotation);
-        QVector3D tractorForward(sin(angleRad), 0.0f, -cos(angleRad));
-
-        // Atualiza a posição do trator, movendo-o na direção 'para frente'.
-        m_tractorPosition += tractorForward.normalized() * distranceThisFrame;
-        // Atualiza a altura Y do trator para que ele siga o terreno, usando a função `getHeight` de NoiseUtils.
-        m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
-    }
-
     // Calcula a velocidade em Km/h (velocidade em unidades/segundo * 3.6 para converter para Km/h).
     float speedkm = m_tractorSpeed * 3.6f;
     emit kmUpdated(speedkm); // Emite o sinal `kmUpdated` com a velocidade em Km/h.
-    // Emite o sinal `coordinatesUpdate` com as coordenadas X (longitude) e Z (latitude) do trator.
-    emit coordinatesUpdate(m_tractorPosition.x(), m_tractorPosition.z());
-    update(); // Solicita uma atualização do widget, o que irá disparar a função paintGL().
+
+    update();
 }
 
 /**
@@ -607,3 +579,142 @@ void MyGLWidget::onSpeedUpdate(float newSpeed)
 void MyGLWidget::onSteeringUpdate(int steeringValue) {
     m_steeringValue = steeringValue; // Atualiza o valor de esterçamento do trator.
 }
+
+void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
+    m_currentGpsData = data;
+
+    if (!m_currentGpsData.isValid) {
+        // se os dados nao sao validos, nao atualizamos a posição nem o status de moviemnto;
+        // a logica de contenção de spam ja esta no speedcontroller
+        qWarning() << "Dado GPS recebidos invalidos. Posição do trator nao atualizada.";
+        return;
+    }
+
+    // a velocidade do trator agora bem do gps
+    m_tractorSpeed = m_currentGpsData.speedKnots * 0.514444f; //convertendo nós para metros/segundo
+    m_currentHeading = m_currentGpsData.courseOverGround; // rumo em graus
+
+    //atualizar a posição X, Z do trator a aprtir das coordenadas GPS
+    updateTractorPositionFromGps(m_currentGpsData);
+
+    //atualizar a altura Y do trator com base na posição X, Z do terreno
+    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+
+    m_tractorRotation = -m_currentHeading;
+
+    //verificar o status de moviemtno (linha reta\curva)
+    checkMovementStatus();
+
+    //armazena os dados atuais como ultimos dados para a proxima iteração
+    m_lastGpsData = m_currentGpsData;
+
+    //atualiza a tela para refletir as novas coordenadas
+    emit coordinatesUpdate(m_currentGpsData.longitude, m_currentGpsData.latitude);
+}
+
+//coverte coordenadas GPS para X/Z do mundo
+void MyGLWidget::updateTractorPositionFromGps(const GpsData& data) {
+    if (!m_hasReferenceCoordinate) {
+        m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
+        m_hasReferenceCoordinate = true;
+        //centraliza o trator no ponto inicial do mundo para evitar offsets muito grandes
+        m_tractorPosition.setX(0.0f);
+        m_tractorPosition.setZ(0.0f);
+        //qInfo() << "Coordenada de referencia GPS definida" << m_referenceCoordiante.latitude() << "," << m_referenceCoordinate.longitude();
+    } else {
+        QGeoCoordinate currentCoord(data.latitude, data.longitude);
+
+        // Calcula a distância Leste-Oeste (X) e Norte-Sul (Z) do ponto de referência.
+        // O QGeoCoordinate::distanceTo() retorna a distância em metros.
+        // AzimuthTo() retorna o rumo (bearing) da coordenada atual para a referência (0=N, 90=E, 180=S, 270=W)
+        // AzimuthFrom() retorna o rumo da referência para a coordenada atual.
+        // Precisamos da distância em X e Z.
+
+        //distancia total em metro
+        double distance = m_referenceCoordinate.distanceTo(currentCoord);
+        //Azimute de coordenada de referencia para coordenada atual
+        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord); // em graus
+        // Convertendo distância e azimute para componentes X e Z
+        // Assumindo que X aumenta para Leste e Z aumenta para Norte (ou diminui, dependendo do seu sistema)
+        // No seu sistema OpenGL, -Z é "para frente" (Norte), +X é "direita" (Leste).
+        // Um azimute de 0 (Norte) deveria levar a -Z.
+        // Um azimute de 90 (Leste) deveria levar a +X.
+        double radAzimuth = qDegreesToRadians(azimuth);
+
+        // Componente X (Leste/Oeste)
+        // Para Leste (90 deg), sin é 1. Para Oeste (270 deg), sin é -1.
+        double deltaX = distance * qSin(radAzimuth);
+        // Componente Z (Norte/Sul)
+        // Para Norte (0 deg), cos é 1. Para Sul (180 deg), cos é -1.
+        // Como o seu Z aponta para "trás" (ou -Z é "frente"), precisamos inverter o sinal
+        double deltaZ = distance * qCos(radAzimuth);
+
+        m_tractorPosition.setX(static_cast<float>(deltaX));
+        m_tractorPosition.setZ(static_cast<float>(-deltaZ));
+    }
+}
+
+//Verifica se o trator esta em linha reta ou fazendo curva
+void MyGLWidget::checkMovementStatus() {
+    //Requer pelo menos dois pontos de dados GPS para comaparar
+    if (!m_lastGpsData.isValid || !m_currentGpsData.isValid) {
+        emit movementStatusUpdated("Aguardando dados GPS...");
+        return;
+    }
+
+    //limites de tolerancia
+    const float SPEED_THRESHOLD = 0.5f; //Metros/segundos, abaixo disso é considerado parado
+    const float HEADIND_CHANGE_THRESHOLD = 2.0f; // Graus, mudança maxima para ser considerado linha reta
+    const float COORD_CHANGE_PROPORTIONALITY_THRESHOLD = 0.1f; // limite para proporicionalidade (idealmente baixo)
+
+    //considerar parado se a velocidade for muito baixa
+    if (m_tractorSpeed < SPEED_THRESHOLD) {
+        emit movementStatusUpdated("Parado");
+        return;
+    }
+
+    //Variação do rumo (heading)
+    float headingDelta = m_currentGpsData.courseOverGround - m_lastGpsData.courseOverGround;
+    //normalizar a variação para estar entre -180 e 180 graus
+    if (headingDelta > 180.0f) headingDelta -= 360.0f;
+    if (headingDelta < -180.0f) headingDelta += 360.0f;
+
+    //Verificar se esta fazendo curva
+    if (qAbs(headingDelta) > HEADIND_CHANGE_THRESHOLD) {
+        emit movementStatusUpdated("Fazendo Curva!");
+        return;
+    }
+
+    // Verificar proporcionalidade da mudança de latitude/longitude para linha reta
+    // Isso é um pouco mais complexo e pode ser redundante se o rumo já for suficiente.
+    // Para uma linha reta, a proporção entre a mudança de Latitude e a mudança de Longitude
+    // deve ser aproximadamente constante (ou a variação de uma delas muito pequena se o movimento for alinhado a um eixo).
+    // Ou, mais robusto: a direção do movimento (azimute entre pontos) deve ser muito próxima ao rumo.
+
+    QGeoCoordinate lastCoord(m_lastGpsData.latitude, m_currentGpsData.longitude);
+    QGeoCoordinate currentCoord(m_currentGpsData.latitude, m_currentGpsData.longitude);
+
+    //calcula o azimute entre o ponto anterior e o ponto atual
+    double pathAzimuth = lastCoord.azimuthTo(currentCoord);
+
+    //diferaça entre o rumo do gps e o azimute do caminho real
+    float azimuthDifference = qAbs(pathAzimuth - m_currentGpsData.courseOverGround);
+    //normalizar a diferença
+    if (azimuthDifference > 180.0f) azimuthDifference = 360.0f - azimuthDifference;
+
+    //se a diferença entre o azimute do caminho e or umo do gps for pequena, e o rumo nao mudou muito
+    if (azimuthDifference < COORD_CHANGE_PROPORTIONALITY_THRESHOLD) {
+        //assume linha reta se o rumo nao mudou siginificamente e
+        // a direção inserida pelos pontos esta alinhada com o rumo do GPS
+        emit movementStatusUpdated("em linha reta");
+    } else {
+        // Se o rumo mudou pouco mas a proporcionalidade não se manteve,
+        // pode ser ruído ou movimento muito sutil.
+        // Para este caso, vamos considerar "Movimento Impreciso" ou continuar com a última determinação.
+        // Por simplicidade, se não foi curva e não está perfeitamente alinhado,
+        // podemos deixar a lógica do heading Delta decidir ou um estado de transição.
+        // Ou simplesmente: se o heading Delta é pequeno, é linha reta. O azimute de pontos valida.
+        emit movementStatusUpdated("Movimento!"); // Ou um status mais genérico se não for claramente curva ou reta
+    }
+}
+

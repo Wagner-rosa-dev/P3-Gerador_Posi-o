@@ -3,6 +3,20 @@
 
 #include <QObject>           // Classe base para o sistema de sinais/slots do Qt.
 #include <QtSerialPort/QSerialPort> // Classe para comunicação com portas seriais.
+#include <QDateTime>
+
+struct GpsData {
+    double latitude;
+    double longitude;
+    float speedKnots;
+    float courseOverGround;
+    float altitude;
+    int fixQuality;
+    int numSatellites;
+    QDateTime timestamp;
+    bool isValid;
+};
+
 
 // Classe: SpeedController
 // Descrição: Esta classe é responsável por ler dados de velocidade e direção
@@ -14,6 +28,7 @@ class SpeedController : public QObject
     Q_OBJECT // Macro necessária para classes que usam sinais e slots do Qt.
 
 public:
+
     // Construtor: SpeedController
     // Descrição: Inicializa o controlador de velocidade, configurando o objeto QSerialPort
     //            e conectando os slots internos para leitura e tratamento de erros.
@@ -26,6 +41,7 @@ public:
     ~SpeedController();
 
 public slots:
+
     // Slot: startListening
     // Descrição: Inicia a comunicação e escuta de dados na porta serial especificada.
     //            Configura os parâmetros da porta (baud rate, data bits, etc.).
@@ -34,6 +50,7 @@ public slots:
     void startListening(const QString &portName);
 
 signals:
+
     // Sinal: speedUpdate
     // Descrição: Emitido sempre que uma nova e válida leitura de velocidade é recebida da porta serial.
     // Parâmetros:
@@ -45,6 +62,8 @@ signals:
     // Parâmetros:
     //   - steeringValue: O valor da direção recém-lida (tipo int).
     void steeringUpdate(int steeringValue);
+
+    void gpsDataUpdate(const GpsData& data);
 
 private slots:
     // Slot Privado: handleReadyRead
@@ -62,10 +81,14 @@ private slots:
     void handleError(QSerialPort::SerialPortError error);
 
 private:
+
     // Membro: m_serialPort
     // Tipo: QSerialPort*
     // Descrição: Ponteiro para o objeto QSerialPort que gerencia a comunicação serial.
     QSerialPort *m_serialPort;
+
+    QByteArray m_serialBuffer;
+    int m_consecutiveInvalidFixes;
 };
 
 #endif // SPEEDCONTROLLER_H

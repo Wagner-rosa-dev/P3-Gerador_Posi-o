@@ -17,10 +17,12 @@
 // Descrição: Define a estrutura de um único vértice para o terreno.
 //            Contém a posição 3D do vértice e seu vetor normal para iluminação.
 struct Vertex {
+
     // Membro: position
     // Tipo: QVector3D
     // Descrição: As coordenadas X, Y e Z do vértice no espaço do modelo do chunk.
     QVector3D position;
+
     // Membro: normal
     // Tipo: QVector3D
     // Descrição: O vetor normal da superfície neste vértice. Usado para cálculos de iluminação.
@@ -39,23 +41,28 @@ public:
     //            (vértices e índices) entre threads, especificamente da thread de worker
     //            para a thread principal para upload na GPU.
     struct MeshData {
+
         // Membro: chunkGridX
         // Tipo: int
         // Descrição: Coordenada X do chunk na grade lógica do terreno.
         int chunkGridX;
+
         // Membro: chunkGridZ
         // Tipo: int
         // Descrição: Coordenada Z do chunk na grade lógica do terreno.
         int chunkGridZ;
+
         // Membro: vertices
         // Tipo: std::vector<Vertex>
         // Descrição: Um vetor contendo todos os vértices da malha para este chunk.
         std::vector<Vertex> vertices;
+
         // Membro: indices
         // Tipo: std::vector<GLuint>
         // Descrição: Um vetor contendo os índices que definem a ordem de desenho dos vértices
         //            para formar triângulos.
         std::vector<GLuint> indices;
+
         // Membro: resolution
         // Tipo: int
         // Descrição: A resolução atual com a qual a malha foi gerada (número de vértices por lado).
@@ -65,6 +72,7 @@ public:
     // Construtor padrão: chunk
     // Descrição: Inicializa os membros do chunk com valores padrão.
     chunk();
+
     // Destrutor: ~chunk
     // Descrição: Libera os recursos alocados pelo chunk, como os objetos OpenGL.
     ~chunk();
@@ -198,10 +206,12 @@ public:
     void setPendingMeshData(const MeshData& data);
 
 private:
+
     // Membro: m_chunkGridX
     // Tipo: int
     // Descrição: Coordenada X do chunk na grade lógica do terreno.
     int m_chunkGridX;
+
     // Membro: m_chunkGridZ
     // Tipo: int
     // Descrição: Coordenada Z do chunk na grade lógica do terreno.
@@ -211,6 +221,7 @@ private:
     // Tipo: int
     // Descrição: O número total de índices usados para desenhar a malha do chunk.
     int m_indexCount;
+
     // Membro: m_vertexCount
     // Tipo: int
     // Descrição: O número total de vértices na malha do chunk.
@@ -220,6 +231,7 @@ private:
     // Tipo: int
     // Descrição: A resolução (número de vértices por lado) com a qual a malha atual foi gerada.
     int m_currentResolution;
+
     // Membro: m_currentLOD
     // Tipo: int
     // Descrição: O Nível de Detalhe (LOD) atual do chunk (e.g., 0 para alta, 1 para baixa).
@@ -230,11 +242,13 @@ private:
     // Descrição: Um ponteiro único para o Vertex Array Object (VAO) deste chunk.
     //            VAOs encapsulam a configuração de atributos de vértice para simplificar o desenho.
     std::unique_ptr<QOpenGLVertexArrayObject> m_vao;
+
     // Membro: m_vbo
     // Tipo: std::unique_ptr<QOpenGLBuffer>
     // Descrição: Um ponteiro único para o Vertex Buffer Object (VBO) deste chunk.
     //            VBOs armazenam os dados de vértice (posições, normais, etc.) na GPU.
     std::unique_ptr<QOpenGLBuffer> m_vbo;
+
     // Membro: m_ebo
     // Tipo: std::unique_ptr<QOpenGLBuffer>
     // Descrição: Um ponteiro único para o Element Buffer Object (EBO) ou Index Buffer Object (IBO) deste chunk.
@@ -251,6 +265,7 @@ private:
     // Descrição: Sinaliza se há dados de malha novos (gerados por uma thread de worker)
     //            que precisam ser enviados para a GPU.
     bool m_hasPendingMesh;
+
     // Membro: m_pendingMeshData
     // Tipo: MeshData
     // Descrição: Armazena temporariamente os dados de malha gerados por uma thread de worker

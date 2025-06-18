@@ -40,17 +40,21 @@ void camera::lookAt(const QVector3D &position, const QVector3D &target, const QV
 
     // Calcula o vetor 'para frente' normalizado, apontando da posição da câmera para o alvo.
     m_front = (target - m_position).normalized();
+
     // Calcula o vetor 'para direita' usando o produto vetorial de 'front' e 'up' global, e normaliza.
     m_right = QVector3D::crossProduct(m_front, up).normalized();
+
     // Calcula o vetor 'para cima' local da câmera usando o produto vetorial de 'right' e 'front', e normaliza.
     m_up = QVector3D::crossProduct(m_right, m_front).normalized();
 
     // Calcula o ângulo de guinada (yaw) a partir dos componentes X e Z do vetor 'front'.
     // `atan2` é usado para obter o ângulo correto em todos os quadrantes. Converte de radianos para graus.
     m_yaw = qRadiansToDegrees(atan2(m_front.z(), m_front.x()));
+
     // Calcula o ângulo de arremesso (pitch) a partir do componente Y do vetor 'front'.
     // `asin` (arcsen) é usado para obter o ângulo vertical. Converte de radianos para graus.
     m_pitch = qRadiansToDegrees(asin(m_front.y()));
+
     // Limita o ângulo de arremesso para evitar inversão da câmera (gimbal lock).
     if (m_pitch > 89.0f) m_pitch = 89.0f;
     if (m_pitch < -89.0f) m_pitch = -89.0f;
@@ -161,14 +165,18 @@ void camera::updateCameraVectors() {
     QVector3D front; // Declara um vetor temporário para o novo vetor 'front'.
     // Calcula o componente X do vetor 'front' usando trigonometria com yaw e pitch.
     front.setX(cos(qDegreesToRadians(m_yaw)) * cos(qDegreesToRadians(m_pitch)));
+
     // Calcula o componente Y do vetor 'front' usando trigonometria com pitch.
     front.setY(sin(qDegreesToRadians(m_pitch)));
+
     // Calcula o componente Z do vetor 'front' usando trigonometria com yaw e pitch.
     front.setZ(sin(qDegreesToRadians(m_yaw)) * cos(qDegreesToRadians(m_pitch)));
+
     m_front = front.normalized(); // Normaliza o vetor 'front' para que ele tenha comprimento 1.
 
     // Recalcula o vetor 'right' usando o produto vetorial entre 'front' e 'worldUp'. Normaliza.
     m_right = QVector3D::crossProduct(m_front, m_worldUp).normalized();
+
     // Recalcula o vetor 'up' usando o produto vetorial entre 'right' e 'front'. Normaliza.
     m_up = QVector3D::crossProduct(m_right, m_front).normalized();
 }

@@ -235,18 +235,6 @@ void chunk::uploadMeshData(const chunk::MeshData& data, QOpenGLFunctions* glFunc
     m_ebo->release(); // Libera o EBO.
 }
 
-/*
-void chunk::init(int cX, int cZ, QOpenGLFunctions *glFuncs) {
-    m_chunkGridX = cX;
-    m_chunkGridZ = cZ;
-    float worldX = static_cast<float>(m_chunkGridX * CHUNK_SIZE);
-    float worldZ = static_cast<float>(m_chunkGridZ * CHUNK_SIZE);
-    m_modelMatrix.setToIdentity();
-    m_modelMatrix.translate(worldX, 0.0f, worldZ);
-    setLOD(1); //Define o LOD inicial, que definira o m_currentResolution
-}
-*/
-
 /**
  * @brief Define o Nível de Detalhe (LOD) atual para o chunk.
  * @param lodLevel O nível de LOD a ser definido (e.g., 0 para alta resolução, 1 para baixa).
