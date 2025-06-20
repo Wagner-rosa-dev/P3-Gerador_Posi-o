@@ -154,7 +154,8 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     m_tractorSpeed(0.0f), // Inicializa a velocidade do trator.
     m_steeringValue(50), // Inicializa o valor de direção (centro).
     m_hasReferenceCoordinate(false), // inicializa como falso
-    m_currentHeading(0.0f) // rumo inicial
+    m_currentHeading(0.0f), // rumo inicial
+    m_kalmanFilter(nullptr)
 
 {
     // Conecta o sinal `timeout` do `m_timer` ao slot `gameTick` deste objeto.
@@ -189,6 +190,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
 MyGLWidget::~MyGLWidget() {
     makeCurrent(); // Garante que o contexto OpenGL está ativo para limpeza.
     // Objetos QOpenGL* (shaders, buffers, vao) são limpos por seus destrutores.
+    delete m_kalmanFilter;
     doneCurrent(); // Libera o contexto OpenGL.
 }
 
@@ -540,17 +542,6 @@ void MyGLWidget::setupTractorGL() {
 }
 
 /**
- * @brief Manipulador de eventos de pressionar tecla.
- * @param event O evento de teclado.
- *
- * Atualmente, apenas chama o manipulador da classe base, mas pode ser expandido
- * para adicionar controles de teclado para depuração ou teste.
- */
-void MyGLWidget::keyPressEvent(QKeyEvent *event) {
-    QOpenGLWidget::keyPressEvent(event); // Chama a implementação da classe base.
-}
-
-/**
  * @brief Slot para receber atualizações de velocidade.
  * @param newSpeed A nova velocidade recebida do SpeedController.
  *
@@ -594,22 +585,89 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     m_tractorSpeed = m_currentGpsData.speedKnots * 0.514444f; //convertendo nós para metros/segundo
     m_currentHeading = m_currentGpsData.courseOverGround; // rumo em graus
 
-    //atualizar a posição X, Z do trator a aprtir das coordenadas GPS
-    updateTractorPositionFromGps(m_currentGpsData);
+     //Converter coordenadas GPS para X/Z do mundo OpenGl
+    //Usaremos a logica de referencia existente para calcular deltaX e deltaZ
+    double deltaX_world = 0.0;
+    double deltaZ_world = 0.0;
 
-    //atualizar a altura Y do trator com base na posição X, Z do terreno
+    if (!m_hasReferenceCoordinate) {
+        m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
+        m_hasReferenceCoordinate = true;
+        //Se é a primeira medição, inicializa o filtro de kalman na origem (0,0) do mundo 3D
+        //com a primeira leitura do GPS
+        m_kalmanFilter = new KalmanFilter(0.0, 0.0);
+        qInfo() << "Coordenada de referencia GPS definida e Kalman filter inicializado";
+    } else {
+        QGeoCoordinate currentCoord(data.latitude, data.longitude);
+        double distance = m_referenceCoordinate.distanceTo(currentCoord);
+        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
+        double radAzimuth = qDegreesToRadians(azimuth);
+
+        deltaX_world = distance * qSin(radAzimuth);
+        deltaZ_world = -distance * qCos(radAzimuth);
+    }
+
+    //Aplicar filtro de Kalman
+    if (m_kalmanFilter) { //Garante que o filtro foi inicializado
+        //A fase de predição é chamada periodicamente pelo gameTick ou na chegaada de dados
+        //mas é crucial que o dt seja o tempo real entre as atualizações do filtro
+        //vamos usar o QDateTime para calcular o dt aqui
+        double dt = m_lastGpsData.timestamp.msecsTo(m_currentGpsData.timestamp) / 1000.0;
+        if (dt <= 0) dt = 0.016; // Garante um dt minimo se as timestamps forem iguais ou inferiores
+
+        //Predição baseado na ultima estimativa, prevea o estado atual
+        //isso é feito antes da atualização com a nova medição
+        //No entanto, se voce esta chamando update em casa nova medição
+        // e o predict é feito no loop principal (gametick), o dt precisa ser
+        //o dt do gametick. Para um filtro de kalman baseado em evento (nova medição),
+        //o predict deve usar o dt desde a ultima medição valida
+        //o dt usado aqui deve ser o tempo real decorrido
+        if (m_lastGpsData.isValid) { // Só prediz se houver uma medição anterior valida
+            m_kalmanFilter->predict(dt); // predição do filtro de kalman
+        } else {
+            // se for a primeira medição valida, o filtro ja foi resetado com ela
+            //nao fazemos predict ainda, pois nao ha estado anterior para prever
+        }
+
+        //Atualização: refine a previsão com a nova medição
+        m_kalmanFilter->update(deltaX_world, deltaZ_world);
+
+        //Obtenha a posição e velocidade suavizadas do filtro kalman
+        QVector2D estimatedPosition = m_kalmanFilter->getStatePosition();
+        QVector2D estimatedVelocity = m_kalmanFilter->getStateVelocity();
+
+        m_tractorPosition.setX(estimatedPosition.x());
+        m_tractorPosition.setZ(estimatedPosition.y()); // y do QVector2D para o Z do mundo
+        //Se desejar usar a velocidade suavizada:
+        m_tractorSpeed = estimatedVelocity.length();
+        m_currentHeading = qRadiansToDegrees(qAtan2(estimatedVelocity.x(), -estimatedVelocity.y())); //Convertendo Vx, Vz para rumo
+    } else {
+        //Fallback: se o filtro nao estiver inicializado (primeira leitura), use a posição bruta
+        m_tractorPosition.setX(static_cast<float>(deltaX_world));
+        m_tractorPosition.setZ(static_cast<float>(deltaZ_world));
+    }
+
+    // Atualizar a altura Y do trator com base na posição X, Z do terreno
+    // (Permanecerá 0.0f devido ao NoiseUtils::getHeight atual)
     m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
 
-    m_tractorRotation = -m_currentHeading;
+    // A rotação do trator pode vir do rumo do GPS ou da velocidade estimada pelo Kalman.
+    // Usaremos o rumo do GPS por simplicidade, ou o estimado pelo Kalman se for mais estável.
+    // m_tractorRotation = -m_currentHeading; (se usar rumo do GPS)
+    // Para usar o rumo estimado do Kalman, seria:
+    m_tractorRotation = -qRadiansToDegrees(qAtan2(m_kalmanFilter->getStateVelocity().x(), -m_kalmanFilter->getStateVelocity().y()));
 
-    //verificar o status de moviemtno (linha reta\curva)
+
+    // Verificar o status de movimento (linha reta/curva)
+    // A lógica de checkMovementStatus pode se beneficiar dos dados suavizados do Kalman
     checkMovementStatus();
 
-    //armazena os dados atuais como ultimos dados para a proxima iteração
-    m_lastGpsData = m_currentGpsData;
+    // Armazena os dados atuais como ultimos dados para a proxima iteração
+    m_lastGpsData = m_currentGpsData; // A timestamp da última medição é importante para o dt
 
-    //atualiza a tela para refletir as novas coordenadas
-    emit coordinatesUpdate(m_currentGpsData.longitude, m_currentGpsData.latitude);
+    // Atualiza a tela para refletir as novas coordenadas
+    // Emita as coordenadas *suavizadas* do Kalman para a UI
+    emit coordinatesUpdate(m_kalmanFilter->getStatePosition().x(), m_kalmanFilter->getStatePosition().y()); // <--- CORREÇÃO: Ordem Lat/Lon e uso do Kalman
 }
 
 //coverte coordenadas GPS para X/Z do mundo

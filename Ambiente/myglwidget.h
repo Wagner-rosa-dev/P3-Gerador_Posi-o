@@ -14,6 +14,7 @@
 #include "speedcontroller.h"    // Inclui a definição da classe SpeedController.
 #include "worldconfig.h"        // Inclui a estrutura WorldConfig.
 #include <QGeoCoordinate>
+#include "kalmanfilter.h"
 
 // Estrutura: SceneMatrices
 // Descrição: Uma estrutura para agrupar as matrizes de projeção e visão da cena.
@@ -108,12 +109,7 @@ protected:
     //   - h: Nova altura do widget.
     void resizeGL(int w, int h) override;
 
-    // Método: keyPressEvent
-    // Descrição: Lida com eventos de pressionar teclas.
-    //            Pode ser usado para controlar a câmera ou o trator manualmente.
-    // Parâmetros:
-    //   - event: O evento de teclado.
-    void keyPressEvent(QKeyEvent *event) override;
+
 
 private slots:
     // Slot Privado: gameTick
@@ -262,6 +258,8 @@ private:
     QGeoCoordinate m_referenceCoordinate;
     bool m_hasReferenceCoordinate;
     float m_currentHeading; // Rumo atual do trator (do GPS)
+
+    KalmanFilter *m_kalmanFilter;
 
 };
 

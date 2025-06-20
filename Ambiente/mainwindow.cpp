@@ -138,8 +138,8 @@ void MainWindow::updateKmLabel(float km)
  */
 void MainWindow::updateCoordinatesLabel(float lon, float lat)
 {
-    m_lonlabel->setText(QString("Lon: %1").arg(lon, 0, 'f', 1));
-    m_latLabel->setText(QString("Lat: %1").arg(lat, 0, 'f', 1));
+    m_lonlabel->setText(QString("Lon: %1").arg(lon, 0, 'f', 7));
+    m_latLabel->setText(QString("Lat: %1").arg(lat, 0, 'f', 7));
 }
 
 void MainWindow::updateMovementStatusLabel(const QString& status)

@@ -12,6 +12,7 @@ SOURCES += \
     camera.cpp \
     chunk.cpp \
     chunkworker.cpp \
+    kalmanfilter.cpp \
     main.cpp \
     mainwindow.cpp \
     myglwidget.cpp \
@@ -23,6 +24,7 @@ HEADERS += \
     camera.h \
     chunk.h \
     chunkworker.h \
+    kalmanfilter.h \
     mainwindow.h \
     myglwidget.h \
     noiseutils.h \
