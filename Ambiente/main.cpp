@@ -4,6 +4,7 @@
 #include <QDebug> // Inclui QDebug para mensagens de depuração (qInfo, qWarning, etc.).
 #include "chunk.h" // Inclui o cabeçalho da classe chunk, necessário para registrar o tipo MeshData.
 #include "speedcontroller.h"
+#include "logger.h"
 
 /**
  * @brief main
@@ -21,6 +22,20 @@ int main(int argc, char *argv[])
     // Esta linha é essencial para qualquer aplicação Qt, pois ela inicializa o sistema de eventos
     // e gerencia os recursos da aplicação.
     QApplication a(argc, argv);
+
+    //Configuração do logger
+    //Voce pode alterar essas linhas para controlar o comportamento do log:
+    //Nivel minimo de log:
+    //      Debug: para ver TUDO (ideal para depuração
+    //      Info: Para ver informações gerais e importantes
+    //      Warning/Erro/Critical: Para ver apenas problemas
+    Logger::getInstance().setMinLevel(Debug);
+
+    //Log para arquivo:
+    //  true: Habilita o salvamento em "app_log.txt" (ou o caminho que voce especificar
+    //  false: Desabilita o salvamente em arquivo
+    Logger::getInstance().setLogToFile(true, "gps_monitor_log.txt"); //Salve em um arquivo especifico no diretorio de aplicação
+
 
     // Registra o tipo customizado 'chunk::MeshData' no sistema de metadados do Qt.
     // Isso é crucial para que o Qt possa passar objetos desse tipo através de conexões de sinais e slots
@@ -48,12 +63,12 @@ int main(int argc, char *argv[])
     QSurfaceFormat::setDefaultFormat(format);
 
     // Imprime informações de depuração sobre o formato da superfície configurado.
-    qInfo() << "Configurando QSurfaceFomat para OPENGL ES" << format.majorVersion() << "." << format.minorVersion();
-    // Verifica se o tipo de renderização configurado é realmente OpenGLES.
+    MY_LOG_INFO("OpenGL", QString("Configurando QSurfaceFormat para OPENGL ES %1.%2")
+                              .arg(format.majorVersion()).arg(format.minorVersion()));
     if (format.renderableType() == QSurfaceFormat::OpenGLES) {
-        qInfo() << "Tipo de renderização OpenGLES";
+        MY_LOG_INFO("OpenGL", "Tipo de renderização OpenGLES");
     } else {
-        qWarning() << "Tipo de renderização NÂO é OpenGLE. Verifique a Configurção";
+        MY_LOG_WARNING("OpenGL", "Tipo de renderização Não é OpenGLES. Verifique a Configuração");
     }
 
     // Cria uma instância da janela principal da aplicação.

@@ -9,6 +9,7 @@
 #include <QTime> // Inclui QTime, embora QElapsedTimer seja preferido para medição de tempo.
 #include <QElapsedTimer> // Inclui QElapsedTimer para medições de tempo precisas (FPS, temp).
 #include <cmath> // Inclui cmath para funções matemáticas como sin, cos, etc.
+#include "logger.h"
 
 // Constantes com o código GLSL dos shaders
 // Estes blocos de string R"(...)" contêm o código-fonte GLSL para os shaders.
@@ -191,6 +192,7 @@ MyGLWidget::~MyGLWidget() {
     makeCurrent(); // Garante que o contexto OpenGL está ativo para limpeza.
     // Objetos QOpenGL* (shaders, buffers, vao) são limpos por seus destrutores.
     delete m_kalmanFilter;
+    m_kalmanFilter = nullptr;
     doneCurrent(); // Libera o contexto OpenGL.
 }
 
@@ -203,46 +205,40 @@ MyGLWidget::~MyGLWidget() {
  */
 void MyGLWidget::initializeGL() {
     initializeOpenGLFunctions(); // Inicializa as funções OpenGL para o contexto atual.
-    qInfo() << "MYGLWIDGET_CPP EXECUTANDO - VERSAO SUPER NOVA 04_06_2025_1530";
+    MY_LOG_INFO("Render", "MYGLWIDGET_CPP EXECUTANDO - VERSAO SUPER NOVA 04_06_2025_1530");
     // Obtém funções OpenGL extras (como UBOs) que podem não estar no perfil principal.
     m_extraFunction = QOpenGLContext::currentContext()->extraFunctions();
     if (!m_extraFunction) {
-        qWarning("QOpenGLExtraFunctions not available. UBOs and other advanced features might not work.");
+        MY_LOG_WARNING("Render", "QOpenGLExtraFunctions not available. UBOs and other advanced features might not work.");
     }
 
     glEnable(GL_DEPTH_TEST); // Habilita o teste de profundidade para que objetos mais próximos cubram os mais distantes.
     glClearColor(0.53f, 0.81f, 0.92f, 1.0f); // Define a cor de fundo (céu) como azul claro.
 
-    qInfo() << "Compilando Terrain Shaders (Versão de Teste 04/06/2025)...";
-    // Tenta adicionar e compilar o shader de vértice do terreno.
+    MY_LOG_INFO("Render", "Compilando Terrain Shaders (Versão de Teste 04/06/2025)...");
     if (!m_terrainShaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex, terrainVertexShaderSource)) {
-        qWarning() << "Terrain Vertex Shader Compilation Error:" << m_terrainShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Terrain Vertex Shader Compilation Error: %1").arg(m_terrainShaderProgram.log()));
     }
-    // Tenta adicionar e compilar o shader de fragmento do terreno.
     if (!m_terrainShaderProgram.addShaderFromSourceCode(QOpenGLShader::Fragment, terrainFragmentShaderSource)) {
-        qWarning() << "Terrain Fragment Shader Compilation Error:" << m_terrainShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Terrain Fragment Shader Compilation Error: %1").arg(m_terrainShaderProgram.log()));
     }
-    // Tenta linkar os shaders para criar o programa de shader.
     if (!m_terrainShaderProgram.link()) {
-        qWarning() << "Terrain Shader Linker Error:" << m_terrainShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Terrain Shader Linker Error: %1").arg(m_terrainShaderProgram.log()));
     } else {
-        qInfo() << "Terrain Shaders linked successfully.";
+        MY_LOG_INFO("Render", "Terrain Shaders linked successfully.");
     }
 
-    qInfo() << "Compilando Line Shaders (Versão de Teste 04/06/2025)...";
-    // Tenta adicionar e compilar o shader de vértice da linha.
+    MY_LOG_INFO("Render", "Compilando Line Shaders (Versão de Teste 04/06/2025)...");
     if (!m_lineShaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex, lineVertexShaderSource)) {
-        qWarning() << "Line Vertex Shader Compilation Error:" << m_lineShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Line Vertex Shader Compilation Error: %1").arg(m_lineShaderProgram.log()));
     }
-    // Tenta adicionar e compilar o shader de fragmento da linha.
     if (!m_lineShaderProgram.addShaderFromSourceCode(QOpenGLShader::Fragment, lineFragmentShaderSource)) {
-        qWarning() << "Line Fragment Shader Compilation Error:" << m_lineShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Line Fragment Shader Compilation Error: %1").arg(m_lineShaderProgram.log()));
     }
-    // Tenta linkar os shaders para criar o programa de shader da linha.
     if (!m_lineShaderProgram.link()) {
-        qWarning() << "Line Shader Linker Error:" << m_lineShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Line Shader Linker Error: %1").arg(m_lineShaderProgram.log()));
     } else {
-        qInfo() << "Line Shaders linked successfully.";
+        MY_LOG_INFO("Render", "Line Shaders linked successfully.");
     }
 
     setupLineQuadVAO(); // Configura o VAO e VBO para o quad usado para desenhar as bordas dos chunks.
@@ -479,23 +475,23 @@ void MyGLWidget::gameTick() {
 
             // Verifica se a linha lida não está vazia.
             if (line.trimmed().isEmpty()) {
-                qWarning() << "Arquivo de temperatura esta vazio";
+                MY_LOG_WARNING("CPU_Temp", "Arquivo de temperatura esta vazio");
             } else {
                 bool ok; // Variável para verificar se a conversão foi bem-sucedida.
                 // Converte a string lida para float e divide por 1000 (o valor do arquivo é em miliCelsius).
                 float temperature = line.toFloat(&ok) / 1000.0;
                 if (ok) { // Se a conversão foi bem-sucedida.
-                    //qInfo() << "Sucesso: leitura da temperatura concluida";
+                    MY_LOG_INFO("CPU_Temp", QString("Leitura da temperatura: %1 °C").arg(temperature, 0, 'f', 1));
                     emit tempUpdated(temperature); // Emite o sinal `tempUpdated` com a temperatura.
                 } else {
-                    qWarning() << "Erro: nao foi possivel converter o conteudo'" << line << "'para numero";
+                    MY_LOG_ERROR("CPU_Temp", QString("Não foi possível converter o conteúdo '%1' para número").arg(line));
                 }
             }
             tempFile.close(); // Fecha o arquivo.
         } else {
             // Se não foi possível abrir o arquivo, registra um aviso.
-            qWarning() << "erro: nao foi possivel abrir o arquivo de temperatura em:" << tempFilePath;
-            qWarning() << "Verifique se o caminho esta correto para a sua placa";
+            MY_LOG_ERROR("CPU_Temp", QString("Não foi possível abrir o arquivo de temperatura em: %1").arg(tempFilePath));
+            MY_LOG_ERROR("CPU_Temp", "Verifique se o caminho esta correto para a sua placa");
         }
 #endif
         m_tempReadTimer.restart(); // Reinicia o timer de leitura de temperatura.
@@ -519,7 +515,7 @@ void MyGLWidget::setupTractorGL() {
     if (!m_tractorShaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex, tractorVertexShaderSource) ||
         !m_tractorShaderProgram.addShaderFromSourceCode(QOpenGLShader::Fragment, tractorFragmentShaderSource) ||
         !m_tractorShaderProgram.link()) {
-        qWarning() << "Erro no shader do trator:" << m_tractorShaderProgram.log();
+        MY_LOG_ERROR("Render", QString("Erro no shader do trator: %1").arg(m_tractorShaderProgram.log()));
         return; // Retorna se houver erro na compilação ou linkagem.
     }
 
@@ -556,8 +552,8 @@ void MyGLWidget::onSpeedUpdate(float newSpeed)
         m_tractorSpeed = newSpeed;
     } else {
         // Se receber um valor inválido, zera a velocidade para segurança e registra um aviso.
+        MY_LOG_WARNING("Speed", "Recebido valor de velocidade invalido (inf ou nan)");
         m_tractorSpeed = 0.0f;
-        qWarning() << "Recebido valor de velocidade invalido (inf ou nan)";
     }
 }
 
@@ -575,28 +571,30 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     m_currentGpsData = data;
 
     if (!m_currentGpsData.isValid) {
-        // se os dados nao sao validos, nao atualizamos a posição nem o status de moviemnto;
-        // a logica de contenção de spam ja esta no speedcontroller
-        qWarning() << "Dado GPS recebidos invalidos. Posição do trator nao atualizada.";
+        // Usando MY_LOG_WARNING
+        MY_LOG_WARNING("GPS_Processor", "Dado GPS recebido inválido. Posição do trator não atualizada.");
         return;
     }
 
-    // a velocidade do trator agora bem do gps
-    m_tractorSpeed = m_currentGpsData.speedKnots * 0.514444f; //convertendo nós para metros/segundo
-    m_currentHeading = m_currentGpsData.courseOverGround; // rumo em graus
+    m_tractorSpeed = m_currentGpsData.speedKnots * 0.514444f;
+    m_currentHeading = m_currentGpsData.courseOverGround;
 
-     //Converter coordenadas GPS para X/Z do mundo OpenGl
-    //Usaremos a logica de referencia existente para calcular deltaX e deltaZ
     double deltaX_world = 0.0;
     double deltaZ_world = 0.0;
+
+    // --- NOVO: Log da Lat/Lon bruta recebida ---
+    MY_LOG_DEBUG("GPS_Processor", QString("GPS Bruto (Lat, Lon): %1,%2").arg(data.latitude, 0, 'f', 6).arg(data.longitude, 0, 'f', 6));
+
 
     if (!m_hasReferenceCoordinate) {
         m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
         m_hasReferenceCoordinate = true;
-        //Se é a primeira medição, inicializa o filtro de kalman na origem (0,0) do mundo 3D
-        //com a primeira leitura do GPS
         m_kalmanFilter = new KalmanFilter(0.0, 0.0);
-        qInfo() << "Coordenada de referencia GPS definida e Kalman filter inicializado";
+        // Usando MY_LOG_INFO
+        MY_LOG_INFO("GPS_Processor", "Coordenada de referencia GPS definida e Kalman Filter inicializado.");
+
+        // NOVO: Log da primeira medição bruta convertida
+        MY_LOG_DEBUG("GPS_Processor", QString("Primeira Medição Bruta (X_mundo, Z_mundo): %1,%2").arg(deltaX_world, 0, 'f', 3).arg(deltaZ_world, 0, 'f', 3));
     } else {
         QGeoCoordinate currentCoord(data.latitude, data.longitude);
         double distance = m_referenceCoordinate.distanceTo(currentCoord);
@@ -605,69 +603,52 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
 
         deltaX_world = distance * qSin(radAzimuth);
         deltaZ_world = -distance * qCos(radAzimuth);
+
+        // --- NOVO: Log das coordenadas X/Z do mundo antes do Kalman ---
+        MY_LOG_DEBUG("GPS_Processor", QString("Coordenadas X/Z Brutas (Mundo): %1,%2").arg(deltaX_world, 0, 'f', 3).arg(deltaZ_world, 0, 'f', 3));
     }
 
-    //Aplicar filtro de Kalman
-    if (m_kalmanFilter) { //Garante que o filtro foi inicializado
-        //A fase de predição é chamada periodicamente pelo gameTick ou na chegaada de dados
-        //mas é crucial que o dt seja o tempo real entre as atualizações do filtro
-        //vamos usar o QDateTime para calcular o dt aqui
+    if (m_kalmanFilter) {
         double dt = m_lastGpsData.timestamp.msecsTo(m_currentGpsData.timestamp) / 1000.0;
-        if (dt <= 0) dt = 0.016; // Garante um dt minimo se as timestamps forem iguais ou inferiores
+        if (dt <= 0) dt = 0.016;
 
-        //Predição baseado na ultima estimativa, prevea o estado atual
-        //isso é feito antes da atualização com a nova medição
-        //No entanto, se voce esta chamando update em casa nova medição
-        // e o predict é feito no loop principal (gametick), o dt precisa ser
-        //o dt do gametick. Para um filtro de kalman baseado em evento (nova medição),
-        //o predict deve usar o dt desde a ultima medição valida
-        //o dt usado aqui deve ser o tempo real decorrido
-        if (m_lastGpsData.isValid) { // Só prediz se houver uma medição anterior valida
-            m_kalmanFilter->predict(dt); // predição do filtro de kalman
-        } else {
-            // se for a primeira medição valida, o filtro ja foi resetado com ela
-            //nao fazemos predict ainda, pois nao ha estado anterior para prever
+        // --- NOVO: Log do Delta Tempo (dt) ---
+        MY_LOG_DEBUG("GPS_Processor", QString("Delta Tempo (dt): %1").arg(dt, 0, 'f', 3));
+
+        if (m_lastGpsData.isValid) {
+            m_kalmanFilter->predict(dt);
         }
 
-        //Atualização: refine a previsão com a nova medição
         m_kalmanFilter->update(deltaX_world, deltaZ_world);
 
-        //Obtenha a posição e velocidade suavizadas do filtro kalman
         QVector2D estimatedPosition = m_kalmanFilter->getStatePosition();
         QVector2D estimatedVelocity = m_kalmanFilter->getStateVelocity();
 
         m_tractorPosition.setX(estimatedPosition.x());
-        m_tractorPosition.setZ(estimatedPosition.y()); // y do QVector2D para o Z do mundo
-        //Se desejar usar a velocidade suavizada:
+        m_tractorPosition.setZ(estimatedPosition.y());
+
         m_tractorSpeed = estimatedVelocity.length();
-        m_currentHeading = qRadiansToDegrees(qAtan2(estimatedVelocity.x(), -estimatedVelocity.y())); //Convertendo Vx, Vz para rumo
+        m_currentHeading = qRadiansToDegrees(qAtan2(estimatedVelocity.x(), -estimatedVelocity.y()));
+
     } else {
-        //Fallback: se o filtro nao estiver inicializado (primeira leitura), use a posição bruta
         m_tractorPosition.setX(static_cast<float>(deltaX_world));
         m_tractorPosition.setZ(static_cast<float>(deltaZ_world));
+        MY_LOG_WARNING("GPS_Processor", "Kalman Filter não inicializado, usando posição bruta.");
     }
 
-    // Atualizar a altura Y do trator com base na posição X, Z do terreno
-    // (Permanecerá 0.0f devido ao NoiseUtils::getHeight atual)
     m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+    m_tractorRotation = -m_currentHeading;
 
-    // A rotação do trator pode vir do rumo do GPS ou da velocidade estimada pelo Kalman.
-    // Usaremos o rumo do GPS por simplicidade, ou o estimado pelo Kalman se for mais estável.
-    // m_tractorRotation = -m_currentHeading; (se usar rumo do GPS)
-    // Para usar o rumo estimado do Kalman, seria:
-    m_tractorRotation = -qRadiansToDegrees(qAtan2(m_kalmanFilter->getStateVelocity().x(), -m_kalmanFilter->getStateVelocity().y()));
-
-
-    // Verificar o status de movimento (linha reta/curva)
-    // A lógica de checkMovementStatus pode se beneficiar dos dados suavizados do Kalman
     checkMovementStatus();
 
-    // Armazena os dados atuais como ultimos dados para a proxima iteração
-    m_lastGpsData = m_currentGpsData; // A timestamp da última medição é importante para o dt
+    m_lastGpsData = m_currentGpsData;
 
-    // Atualiza a tela para refletir as novas coordenadas
-    // Emita as coordenadas *suavizadas* do Kalman para a UI
-    emit coordinatesUpdate(m_kalmanFilter->getStatePosition().x(), m_kalmanFilter->getStatePosition().y()); // <--- CORREÇÃO: Ordem Lat/Lon e uso do Kalman
+    // --- NOVO: Log da posição e rotação finais do trator na tela ---
+    MY_LOG_DEBUG("Render_Final", QString("Trator Final - Pos(X,Z): %1,%2 Rotação:%3 Velocidade:%4")
+                                     .arg(m_tractorPosition.x(), 0, 'f', 3).arg(m_tractorPosition.z(), 0, 'f', 3)
+                                     .arg(m_tractorRotation, 0, 'f', 2).arg(m_tractorSpeed, 0, 'f', 2));
+
+    emit coordinatesUpdate(m_kalmanFilter->getStatePosition().x(), m_kalmanFilter->getStatePosition().y());
 }
 
 //coverte coordenadas GPS para X/Z do mundo

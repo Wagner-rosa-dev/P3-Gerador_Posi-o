@@ -1,6 +1,7 @@
 #include "kalmanfilter.h"
 #include <QDebug> // para mensagens de depuração
 #include <QtMath> // Para qPow
+#include "logger.h"
 
 //Construtor: incializa o filtro com um estado inicial
 KalmanFilter::KalmanFilter(double initialX, double initialZ)
@@ -82,10 +83,20 @@ void KalmanFilter::reset(double newX, double newZ) {
 //Fase de Predição
 void KalmanFilter::predict(double dt) {
     if (!m_isInitialized) {
-        qWarning() << "KalmanFilter not initialized. Call reset() first";
+        MY_LOG_WARNING("Kalman", "kalmanFilter não incializado. Chame resete() primeiro");
         return;
     }
 
+    //novo log do estado antes da predição
+    //x[0]=Px, x[1]=Pz, x[2]=Vx, x[3]=Vz.
+    MY_LOG_DEBUG("kalman_predict", QString("IN x_antes_pred: Px=%1 Pz=%2 Vx=%3 Vz=%4")
+                                        .arg(x[0], 0, 'f', 3).arg(x[1], 0, 'f', 3)
+                                        .arg(x[2], 0, 'f', 3).arg(x[3], 0, 'f', 3));
+    //log da incerteza (variancia da posição) ANTES da predição
+    //P(0,0) é a variancia da posição X, P(1,1) é a variancia da posição Z
+    //Valores altos siginifcam mais incerteza
+    MY_LOG_DEBUG("kalman_Predict", QString("in P_antes_pred(0,0)=%1 P(1,1)=%2")
+                                       .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
     //Atualiza a matriz de transição de estado (F) com o delta de tempo
     //Px_novo = Px_atual + Vx_atual * dt
     //Pz_novo = Pz_atual + Vz_atual * dt
@@ -100,117 +111,77 @@ void KalmanFilter::predict(double dt) {
 
     //Predição da Covariancia (P = F * P_anterior * F^T + Q)
     P = F * P * F.transposed() + Q;
+
+    //log do estado Depois da predição
+    MY_LOG_DEBUG("kalman_Predict", QString("OUT x_pred: Px=%1 Pz=%2 Vx=%3 Vz=%4")
+                                        .arg(x[0], 0, 'f', 3).arg(x[1], 0, 'f', 3)
+                                        .arg(x[2], 0, 'f', 3).arg(x[3], 0, 'f', 3));
+    //log da incerteza (variancias da posição) depois da predição
+    MY_LOG_DEBUG("Kalman_predict", QString("OUT P_pred(0,0)=%1 P(1,1)=%2")
+                                       .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
 }
 
 //FAse de atualização
 void KalmanFilter::update(double measuredX, double measuredZ) {
     if (!m_isInitialized) {
-        qWarning() << "KalmanFilter not initialized. Call reset() first.";
+        MY_LOG_WARNING("Kalman", "KalmanFilter não inicializado. Chame reset() primeiro.");
         return;
     }
 
-    // Vetor de Medição (z): [Px_medido, Pz_medido]
-    QVector2D z(measuredX, measuredZ);
+    QVector2D z_2d(measuredX, measuredZ); // Medição 2D (não usada diretamente para o cálculo)
 
-    //Inovação (y = z - H * x)
-    // A medição prevista (H*x) deve ser um QVector2D para compara com z.
-    //Vamos extrair as partes relevantes de H*x
-    QVector2D predictedMeasurement = QVector2D(x[0], x[1]); //Px, Pz do estado previsto
-    QVector2D y = z - predictedMeasurement; // Vetor de inovação (diferença entre medição e previsão)
+    // --- NOVO: Log da medição recebida (X, Z do mundo) ---
+    // Esta é a leitura de posição X/Z que vem do seu GPS.
+    MY_LOG_DEBUG("Kalman_Update", QString("IN z_measured(X,Z): %1,%2").arg(measuredX, 0, 'f', 3).arg(measuredZ, 0, 'f', 3));
 
-    //Inovação de Covariancia (S = H * P * H^T + R)
-    //H é 2x4, P é 4x4, H^T é 4x2. (H * P * H^T) = (2x4 * 4x4 * 4x2) = 2x2
-    //R é 2x2. S será 2x2
-    QMatrix4x4 H_transposed = H.transposed();
-    QMatrix4x4 S_4x4 = H * P * H_transposed + R; // Aqui S_4x4. mas só as 2x2 são válidas
-    //Precisamos de uma matrix 2x2 para S para operações subsequentes
-    // Vamos construir S_2x2 manualmente a partir de S_4x4 ou refatorar H e R para serem 2x4 e 2x2
+    QVector4D z_expanded(measuredX, measuredZ, 0.0, 0.0); // Medição expandida para 4D
 
-    //Refatorando: Para ter certeza de que as operações de matrizes estão corretas em termos de dimensões,
-    //vamos garantir que H e R sejam dimensionadas corretamente para as medições 2D
-    //Para isso, a classe QMatrix4x4 não é ideal para operações com matrizes de dimensões mistas como 2x4
-    //Teriamos que simular as operações de matriz manualmente ou usar uma biblioteca linear-algebra mais flexivel
-    //No entendo, para manter a simplicidade e o uso do QtMatrix4x4, vamos manter H e R como 4x4
-    //e extrair as submatrizes de forma "implicita" para os calculos que exigem 2x2
+    // Inovação: A diferença entre o que o filtro previu e o que o sensor mediu.
+    QVector4D y = z_expanded - (H * x); // 'y' é a inovação, use 'y' para evitar conflito com 'y_'
 
-    //Vamos assumir que H e R sao 4x4, mas as medições só preenchem as primeiras 2 componenetes
-    //Então, ao calcular S, apenas a submatriz 2x2 superior-esquerda de (H * P * H^T) é relevante
-    //S_2x2 = (H_2x4 * P_4x4 * H_4x2^T) + R_2x2
-    //É uma limitação do QMatrix4x4 para esta aplicação
-    //Uma alternatica é uusar:
-    //S = H * P * H_transposed
-    //E então R
+    // --- NOVO: Log da inovação (diferença entre medido e previsto) ---
+    // Valores altos em y[0] e y[1] indicam que a previsão do filtro e a medição do GPS estão muito diferentes.
+    MY_LOG_DEBUG("Kalman_Update", QString("IN y_innovation(X,Z,Vx,Vz): %1,%2,%3,%4")
+                                      .arg(y[0], 0, 'f', 3).arg(y[1], 0, 'f', 3)
+                                      .arg(y[2], 0, 'f', 3).arg(y[3], 0, 'f', 3));
 
-    //Cálculo do ganho de Kalman K: K = P * H^T * inv(S)
-    //S_inv = S.inverted(); (precisaria ser 2x2)
+    QMatrix4x4 S = H * P * H.transposed() + R; // Covariância da inovação
 
-    //Dada a limitação do QMatrix4x4 para submatrizes, a forma mais robusta e didática
-    //para um filtro de Kalman 2D (posição) é representar H como 2x4 e R como 2x2
-    //e, se necessario, implementar multiplicação de matrizes para essas dimensões
-    //Porém, o objetivo é usar QMatrix4x4
-    //Vamos Simplificar o 'H' para ser 'H = [1 0 0 0; 0 1 0 0; 0 0 0 0; 0 0 0 0]'
-    //e o 'R' para ser 'R = [Rx 0 0 0; 0 Rz 0 0; 0 0 0 0; 0 0 0 0]'
-    //E entao 'S = H * P * H^T + R' sera 4x4
-    //os elementos S(0,0) e S(1,1) serão os mais relevantes
-
-    //Calculando o ganho de Kalman K = P * H^T * S_inv
-    //S = H * P * H^T + R;
-    //O problema é que z é 2D, e H*x resulta em 2D. Mas P é 4x4
-    //K deve ser 4x2. H é 2x4. H_transposed é 4x2.
-    //P*H_transposed = 4x4 * 4x2 = 4x2
-    //S = H * (P * H_transposed) + R. (2x4 * 4x2) + 2x2 = 2x2 + 2x2 = 2x2
-
-    //Vamos reajustar a estrutura da atualização para usar submatrizes ou uma biblioteca que lide com isso
-    //Para nao complicar com bibliotecas externas ou manipulação manual de arrays para simular matrizes de tamanhas diferentes
-    //e mantendo QMatrix4x4 (que é 4x4), a abordagem amis comum é estender as medições para 4D com zeros para velocidade
-    //Ou sejam se o GPS mede [Px, Pz], a medição 'z' se torna [Px, Pz, 0, 0]
-    //E R é 4x4, onde as variancias da velocidade medidas são muito altas (ou os elementos são zero se não medidos)
-
-    //Vamos reformular a Matriz H no construtor para ser 4x4
-    //H(0,0)=1, H(1,1)=1, e o resto zero
-    //assim, H*x será um QVector4D onde as duas primeiras componenetes são Px, Pz
-    //E z (medição) tambem precisa ser um QVector4D
-    //'z = QVector4D(measuredX, measuredZ, 0.0, 0.0);'
-    //'y = z - H * x;'
-    //Essa é uma forma de usar QMatrix4x4
-
-    //Refatorando o construtor do KalmanFilter com a matriz H e R 4x4
-    //H = [1 0 0 0]
-    //    [0 1 0 0]
-    //    [0 0 0 0]
-    //    [0 0 0 0]
-    //R = [Rx 0 0 0]
-    //    [0 Rz 0 0]
-    //    [0 0 Rv_x Rv_x_z_noise] <-- ruido para velocidade que nao é medida diretamente
-    //    [0 0 Rv_z_x_noise Rv_z]
-
-    //com as modificações acima no construtor, podemos prosseguir com o update()
-    //Medição expandida para 4D
-    QVector4D z_expanded(measuredX, measuredZ, 0.0, 0.0); // velocidade medidas são 0 para simplificar
-
-    //Inovaçõa (y = z_expanded - H * x)
-    QVector4D y_ = z_expanded - (H * x);
-
-    //Inovção Covariancia(S = H * P * H^T + R)
-    QMatrix4x4 S = H * P * H.transposed() + R;
-
-    // Ganho de kalman (K = P * H^T * inv(S))
     QMatrix4x4 S_inverted = S.inverted();
-    if (S_inverted.isIdentity()) { //Verificação simples para singularidade
-        qWarning() << "Inovação de covariancia (S) é singular. Não é possivel calcular inverso";
+    if (S_inverted.isIdentity()) { // isIdentity() é uma forma simples de verificar se é singular
+        MY_LOG_ERROR("Kalman", "Inovação de covariancia (S) é singular. Não é possível calcular inverso.");
         return;
     }
-    QMatrix4x4 K = P * H.transposed() * S_inverted;
+    QMatrix4x4 K = P * H.transposed() * S_inverted; // Ganho de Kalman
 
-    //Atualização do estado (x = x + K * y)
-    x = x + (K * y_);
+    // --- NOVO: Log do Ganho de Kalman (K) ---
+    // Os elementos da diagonal principal (K(0,0), K(1,1)) indicam o quanto o filtro
+    // ajustará sua estimativa de posição com base na nova medição.
+    // Valores próximos de 1.0 significam que o filtro confia muito na medição.
+    // Valores próximos de 0.0 significam que o filtro confia mais na sua previsão.
+    MY_LOG_DEBUG("Kalman_Update", QString("IN K(0,0)=%1 K(0,1)=%2 K(1,0)=%3 K(1,1)=%4")
+                                      .arg(K(0,0), 0, 'f', 3).arg(K(0,1), 0, 'f', 3)
+                                      .arg(K(1,0), 0, 'f', 3).arg(K(1,1), 0, 'f', 3));
+    MY_LOG_DEBUG("Kalman_Update", QString("IN K(2,2)=%1 K(3,3)=%2")
+                                      .arg(K(2,2), 0, 'f', 3).arg(K(3,3), 0, 'f', 3));
 
-    //Atualiza a Covariancia(P = (I - K * H) * P)
+
+    x = x + (K * y); // Atualização do Estado: O estado é corrigido usando o ganho de Kalman e a inovação.
+
     QMatrix4x4 I;
-    I.setToIdentity(); //Matriz identidade 4x4
-    P = (I - K * H) * P;
-}
+    I.setToIdentity();
+    P = (I - K * H) * P; // Atualização da Covariância: A incerteza diminui após a atualização.
 
+    // --- NOVO: Log do estado FINAL (Px, Pz, Vx, Vz) após atualização ---
+    // Esta é a estimativa mais precisa do filtro para a posição e velocidade.
+    MY_LOG_DEBUG("Kalman_Update", QString("OUT x_est: Px=%1 Pz=%2 Vx=%3 Vz=%4")
+                                      .arg(x[0], 0, 'f', 3).arg(x[1], 0, 'f', 3)
+                                      .arg(x[2], 0, 'f', 3).arg(x[3], 0, 'f', 3));
+    // --- NOVO: Log da incerteza (variâncias da posição) FINAL após atualização ---
+    // P(0,0) e P(1,1) devem ser menores que os valores de 'P_antes_pred' da fase de predição.
+    MY_LOG_DEBUG("Kalman_Update", QString("OUT P_est(0,0):%1 P_est(1,1):%2")
+                                      .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
+}
 //Retorna a posição (X, Z) estimada
 QVector2D KalmanFilter::getStatePosition() const {
     return QVector2D(x[0], x[1]);

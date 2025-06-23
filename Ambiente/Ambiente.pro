@@ -13,6 +13,7 @@ SOURCES += \
     chunk.cpp \
     chunkworker.cpp \
     kalmanfilter.cpp \
+    logger.cpp \
     main.cpp \
     mainwindow.cpp \
     myglwidget.cpp \
@@ -25,6 +26,7 @@ HEADERS += \
     chunk.h \
     chunkworker.h \
     kalmanfilter.h \
+    logger.h \
     mainwindow.h \
     myglwidget.h \
     noiseutils.h \

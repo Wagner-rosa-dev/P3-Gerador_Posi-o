@@ -1,6 +1,7 @@
 #include "speedcontroller.h" // Inclui o cabeçalho da classe SpeedController.
 #include <QDebug>            // Para mensagens de depuração.
 #include <QStringList>
+#include "logger.h"
 
 
 double convertNmeaToDecimal(const QString& nmeaValue, const QString& hemisphere) {
@@ -68,9 +69,9 @@ void SpeedController::startListening(const QString &portName)
     m_serialPort->setFlowControl(QSerialPort::NoFlowControl); // Define sem controle de fluxo.
 
     if (m_serialPort->open(QIODevice::ReadOnly)) { // Tenta abrir a porta serial em modo somente leitura.
-        qInfo() << "Controlador de velocidade conectado na porta:" << portName;
+        MY_LOG_INFO("Serial", QString("controlador de velocidade conectado na porta serial").arg(portName));
     } else {
-        qWarning() << "Não foi possivel abrir a porta" << portName << ":" << m_serialPort->errorString();
+        MY_LOG_ERROR("Serial", QString("Não foi possivel abrir a porta %1: 2%").arg(portName).arg(m_serialPort->errorString()));
     }
 }
 
@@ -96,6 +97,7 @@ void SpeedController::handleReadyRead()
 
         //tenta parsear a linha como uma mensagem NMEA
         QString nmeaSentence = QString::fromLatin1(line);
+        MY_LOG_DEBUG("GPS_RAW", QString("NMEA Bruta: %1").arg(nmeaSentence));
         QStringList parts = nmeaSentence.split(',');
 
         GpsData currentGpsData;
@@ -119,6 +121,12 @@ void SpeedController::handleReadyRead()
                          //timestamp(se necessario, pode ser mais complexo com data
                         //Qtime nmeaTime = QTime::fromString(parts[1].left(6), "hhmmss");
                         currentGpsData.timestamp = QDateTime::currentDateTime(); //tempo atual da placa por simplicidade
+
+                        MY_LOG_DEBUG("GPS_PARSED", QString("GPRMC Parseado - Lat:1% Lon:%2 Vel(nos):%3 Rumo:%4")
+                                                        .arg(currentGpsData.latitude, 0, 'f', 6)
+                                                        .arg(currentGpsData.longitude, 0, 'f', 6)
+                                                        .arg(currentGpsData.speedKnots, 0, 'f', 2)
+                                                        .arg(currentGpsData.courseOverGround, 0, 'f', 2));
                     }
                 }
             } else if (setenceType.startsWith("$GPGGA")) {
@@ -136,6 +144,10 @@ void SpeedController::handleReadyRead()
                             currentGpsData.longitude = convertNmeaToDecimal(parts[4], parts[5]);
                             currentGpsData.timestamp = QDateTime::currentDateTime();
                         }
+                        MY_LOG_DEBUG("GPS_PARSED", QString("GPGGA Parseado = Alt:%1 Fix:%2 Sats:%3")
+                                                        .arg(currentGpsData.altitude, 0, 'f', 2)
+                                                        .arg(currentGpsData.fixQuality)
+                                                        .arg(currentGpsData.numSatellites));
                     }
                 }
             }
@@ -144,11 +156,10 @@ void SpeedController::handleReadyRead()
         //Logica de contenção de spam emissão de sinais
         if (currentGpsData.isValid) {
             m_consecutiveInvalidFixes = 0; // reseta o contador
-            //qInfo() << "GPS Data:" << currentGpsData.latitude << currentGpsData.longitude <<currenGpsData.speedKnots << currentGpsData.courseOverGround << currentGpsData.altitude;
             emit gpsDataUpdate(currentGpsData);
 
         } else {
-            //qWarning() << "Invalid GPS data received or no recognizes NMEA setence:" << nmeaSentence;
+            MY_LOG_WARNING("GPS_PARSED", QString("Dados GPS invalidos ou sentenças NMEA não reconhecida/valida: %1").arg(nmeaSentence));
         }
     }
 }
@@ -162,7 +173,7 @@ void SpeedController::handleReadyRead()
 void SpeedController::handleError(QSerialPort::SerialPortError error)
 {
     if (error != QSerialPort::NoError) { // Se o erro não for `NoError`.
-        qWarning() << "Ocorreu um erro na prta serial:" << m_serialPort->errorString();
+        MY_LOG_ERROR("serial", QString("Ocorreu um erro na porta serial:%1").arg(m_serialPort->errorString()));
         // se o erro for serio, podemos resetar o contador de falhas ou fechar a porta
         m_consecutiveInvalidFixes = 0;
     }
