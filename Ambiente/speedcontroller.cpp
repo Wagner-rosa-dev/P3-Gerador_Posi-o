@@ -71,7 +71,7 @@ void SpeedController::startListening(const QString &portName)
     if (m_serialPort->open(QIODevice::ReadOnly)) { // Tenta abrir a porta serial em modo somente leitura.
         MY_LOG_INFO("Serial", QString("controlador de velocidade conectado na porta serial").arg(portName));
     } else {
-        MY_LOG_ERROR("Serial", QString("Não foi possivel abrir a porta %1: 2%").arg(portName).arg(m_serialPort->errorString()));
+        MY_LOG_ERROR("Serial", QString("Não foi possivel abrir a porta %1: %2").arg(portName).arg(m_serialPort->errorString()));
     }
 }
 
@@ -122,7 +122,7 @@ void SpeedController::handleReadyRead()
                         //Qtime nmeaTime = QTime::fromString(parts[1].left(6), "hhmmss");
                         currentGpsData.timestamp = QDateTime::currentDateTime(); //tempo atual da placa por simplicidade
 
-                        MY_LOG_DEBUG("GPS_PARSED", QString("GPRMC Parseado - Lat:1% Lon:%2 Vel(nos):%3 Rumo:%4")
+                        MY_LOG_DEBUG("GPS_PARSED", QString("GPRMC Parseado - Lat:%1 Lon:%2 Vel(nos):%3 Rumo:%4")
                                                         .arg(currentGpsData.latitude, 0, 'f', 6)
                                                         .arg(currentGpsData.longitude, 0, 'f', 6)
                                                         .arg(currentGpsData.speedKnots, 0, 'f', 2)

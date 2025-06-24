@@ -79,6 +79,6 @@ private:
 
 //Log critico: erros graves
 #define MY_LOG_CRITICAL(category, msg) \
-    Logger::getIntance().log(Critical, category, msg, __FILE__, __LINE__, __FUNCTION__)
+    Logger::getInstance().log(Critical, category, msg, __FILE__, __LINE__, __FUNCTION__)
 
 #endif // LOGGER_H
