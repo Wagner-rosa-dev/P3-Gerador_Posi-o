@@ -62,7 +62,7 @@ SpeedController::~SpeedController()
 void SpeedController::startListening(const QString &portName)
 {
     m_serialPort->setPortName(portName); // Define o nome da porta serial.
-    m_serialPort->setBaudRate(QSerialPort::Baud4800); // Define a taxa de transmissão para 115200 bps (compatível com ESP32).
+    m_serialPort->setBaudRate(QSerialPort::Baud9600); // Define a taxa de transmissão para 115200 bps (compatível com ESP32).
     m_serialPort->setDataBits(QSerialPort::Data8); // Define 8 bits de dados por quadro.
     m_serialPort->setParity(QSerialPort::NoParity); // Define sem paridade.
     m_serialPort->setStopBits(QSerialPort::OneStop); // Define 1 stop bit.
@@ -105,9 +105,9 @@ void SpeedController::handleReadyRead()
 
         // --- Parsing de mensagem NEMA ---
         if (parts.size() > 8) {
-            QString setenceType = parts[0];
+            QString setenceHeader = parts[0];
 
-            if (setenceType.startsWith("$GPRMC")) { //
+            if (setenceHeader.endsWith("RMC")) { //
                 if (parts.size() >= 13) {
                     QString status = parts[2]; // A = active, v = void
 
@@ -129,7 +129,7 @@ void SpeedController::handleReadyRead()
                                                         .arg(currentGpsData.courseOverGround, 0, 'f', 2));
                     }
                 }
-            } else if (setenceType.startsWith("$GPGGA")) {
+            } else if (setenceHeader.endsWith("GGA")) {
                 if (parts.size() >= 15) {
                     int fixQuality = parts[6].toInt(); // 0 = no fix, 1 = gps Fix, 2 = FGPS Fix
                     currentGpsData.fixQuality = fixQuality;

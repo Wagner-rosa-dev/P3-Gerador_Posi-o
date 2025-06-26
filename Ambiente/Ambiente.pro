@@ -42,5 +42,7 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
+INCLUDEPATH += $$PWD/libs/Eigen
+#Para que o compilador possa encontrar os cabeçalhos da eigen
 
 

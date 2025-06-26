@@ -179,7 +179,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     connect(m_speedController, &SpeedController::gpsDataUpdate, this, &MyGLWidget::onGpsDataUpdate);
     // Inicia a escuta na porta serial especificada.
     // É importante verificar qual porta USB está sendo usada no Linux.
-    m_speedController->startListening("/dev/ttyACM0");
+    m_speedController->startListening("/dev/ttymxc1");
 }
 
 /**
@@ -628,7 +628,15 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
         m_tractorPosition.setZ(estimatedPosition.y());
 
         m_tractorSpeed = estimatedVelocity.length();
+        const float MIN_VISUAL_SPEED_THRESHOLD = 0.2;
+
+        //Se a velocidade estimada for menor que o limiar, consideramos o trator parado
+        if (m_tractorSpeed < MIN_VISUAL_SPEED_THRESHOLD) {
+            m_tractorSpeed = 0.0f; // FOrça a velocidade para zero
+        }
+
         m_currentHeading = qRadiansToDegrees(qAtan2(estimatedVelocity.x(), -estimatedVelocity.y()));
+
 
     } else {
         m_tractorPosition.setX(static_cast<float>(deltaX_world));
