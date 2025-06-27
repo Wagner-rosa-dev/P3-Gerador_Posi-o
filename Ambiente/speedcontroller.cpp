@@ -3,7 +3,7 @@
 #include <QStringList>
 #include "logger.h"
 
-
+namespace {
 double convertNmeaToDecimal(const QString& nmeaValue, const QString& hemisphere) {
     if (nmeaValue.isEmpty()) return 0.0;
 
@@ -21,6 +21,9 @@ double convertNmeaToDecimal(const QString& nmeaValue, const QString& hemisphere)
     }
     return decimalDegrees;
 }
+}
+
+
 
 /**
  * @brief Construtor da classe SpeedController.

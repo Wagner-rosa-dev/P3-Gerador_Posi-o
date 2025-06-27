@@ -12,6 +12,7 @@ SOURCES += \
     camera.cpp \
     chunk.cpp \
     chunkworker.cpp \
+    gpsfileplayer.cpp \
     kalmanfilter.cpp \
     logger.cpp \
     main.cpp \
@@ -25,6 +26,7 @@ HEADERS += \
     camera.h \
     chunk.h \
     chunkworker.h \
+    gpsfileplayer.h \
     kalmanfilter.h \
     logger.h \
     mainwindow.h \

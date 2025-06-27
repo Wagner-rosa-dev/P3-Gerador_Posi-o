@@ -12,7 +12,7 @@ struct WorldConfig {
     // Tipo: int
     // Descrição: Define o tamanho de um chunk individual em unidades do mundo (por exemplo, metros).
     //            Um chunk é uma seção quadrada do terreno.
-    int chunkSize = 50;
+    int chunkSize = 3;
 
     // Membro: highRes
     // Tipo: int
@@ -33,7 +33,7 @@ struct WorldConfig {
     // Descrição: Define o número de chunks a serem renderizados ao redor do chunk central
     //            da câmera. Por exemplo, um valor de 5 significa uma grade de 5x5 chunks.
     //            Isso controla a área total do terreno visível.
-    int gridRenderSize = 5;
+    int gridRenderSize = 15;
 
     // Membro: lodDistanceThreshold
     // Tipo: float

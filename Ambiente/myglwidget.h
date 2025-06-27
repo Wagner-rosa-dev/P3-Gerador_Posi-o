@@ -15,6 +15,7 @@
 #include "worldconfig.h"        // Inclui a estrutura WorldConfig.
 #include <QGeoCoordinate>
 #include "kalmanfilter.h"
+#include "gpsfileplayer.h"
 
 // Estrutura: SceneMatrices
 // Descrição: Uma estrutura para agrupar as matrizes de projeção e visão da cena.
@@ -238,6 +239,8 @@ private:
     // Tipo: SpeedController*
     // Descrição: Ponteiro para o controlador de velocidade que se comunica com a porta serial.
     SpeedController *m_speedController;
+
+    GpsFilePlayer *m_gpsFilePlayer;
 
     // Membro: m_tractorSpeed
     // Tipo: float

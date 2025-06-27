@@ -165,7 +165,9 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     // Inicia o timer para disparar a cada 16 milissegundos, o que corresponde a aproximadamente 60 quadros por segundo (1000ms / 16ms = 62.5 FPS).
     m_timer.start(16);
 
+    //#define USE_LIVE_GPS
 
+#ifdef USE_LIVE_GPS
     // Nova lógica do controlador:
     // Cria uma nova instância de SpeedController.
     m_speedController = new SpeedController(this);
@@ -180,6 +182,20 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     // Inicia a escuta na porta serial especificada.
     // É importante verificar qual porta USB está sendo usada no Linux.
     m_speedController->startListening("/dev/ttymxc1");
+
+#else
+    // Lógica para reprodução de arquivo GPS (GpsFilePlayer)
+    m_speedController = nullptr; // Garante que o ponteiro não aponte para lixo se não for usado
+    m_gpsFilePlayer = new GpsFilePlayer(this);
+    connect(m_gpsFilePlayer, &GpsFilePlayer::gpsDataUpdate, this, &MyGLWidget::onGpsDataUpdate);
+    connect(m_gpsFilePlayer, &GpsFilePlayer::playbackFinished, this, [](){
+        MY_LOG_INFO("GPS_Input", "Reprodução do arquivo GPS concluída.");
+        // Opcional: Adicione lógica aqui para lidar com o fim da reprodução (e.g., reiniciar, parar o app)
+    });
+
+    m_gpsFilePlayer->startPlayback("/home/root/GPSTEXT.txt", 1000); // 100ms para simular um GPS de 10Hz
+    MY_LOG_INFO("GPS_Input", "Usando reprodução de arquivo GPS (GpsFilePlayer).");
+#endif
 }
 
 /**
@@ -262,8 +278,8 @@ void MyGLWidget::initializeGL() {
  * que formam a espessura da linha e o eleva ligeiramente para evitar z-fighting.
  */
 void MyGLWidget::setupLineQuadVAO() {
-    const float thickness = 0.10f; // Controla a espessura da linha.
-    const float y_offset = 0.2f; // Pequena elevação em relação ao terreno para evitar z-fighting (artefato visual quando dois polígonos estão na mesma profundidade).
+    const float thickness = 0.05f; // Controla a espessura da linha.
+    const float y_offset = 0.01f; // Pequena elevação em relação ao terreno para evitar z-fighting (artefato visual quando dois polígonos estão na mesma profundidade).
 
     const float s = m_worldConfig.chunkSize; // O tamanho do chunk, usado para dimensionar as linhas.
     const float t = thickness / 2.0f; // Metade da espessura para cálculos simétricos.
