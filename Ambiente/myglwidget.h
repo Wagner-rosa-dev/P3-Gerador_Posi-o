@@ -16,6 +16,7 @@
 #include <QGeoCoordinate>
 #include "kalmanfilter.h"
 #include "gpsfileplayer.h"
+#include "terraingrid.h"
 
 // Estrutura: SceneMatrices
 // Descrição: Uma estrutura para agrupar as matrizes de projeção e visão da cena.
@@ -137,17 +138,9 @@ private slots:
     void onGpsDataUpdate(const GpsData& data);
 
 private:
-
-    // Método Privado: setupLineQuadVAO
-    // Descrição: Configura o Vertex Array Object (VAO) e Vertex Buffer Object (VBO)
-    //            para um quad simples que será usado para desenhar as bordas dos chunks.
-    void setupLineQuadVAO();
-
     // Método Privado: setupTractorGL
     // Descrição: Configura os shaders, VAO e VBO para renderizar o modelo do trator.
     void setupTractorGL();
-
-    void updateTractorPositionFromGps(const GpsData& data);
 
     void checkMovementStatus();
 
@@ -181,6 +174,11 @@ private:
     // Descrição: Objeto responsável por gerenciar o terreno 3D.
     terrainmanager m_terrainManager;
 
+    // Membro: m_terrainGrid
+    // Tipo: TerrainGrid
+    // Descrição: Novo objeto responsável por gerenciar e renderizar a grade do terreno.
+    TerrainGrid m_terrainGrid; // Adicionado: Nova instância de TerrainGrid
+
     // Membro: m_fpsTime
     // Tipo: QElapsedTimer
     // Descrição: Timer para medir o tempo decorrido para calcular o FPS.
@@ -201,19 +199,12 @@ private:
     // Descrição: Ponteiro para funções OpenGL ES 3.0 e extensões.
     QOpenGLExtraFunctions *m_extraFunction;
 
-    // Membro: m_lineQuadVao
-    // Tipo: QOpenGLVertexArrayObject
-    // Descrição: VAO para desenhar as bordas dos chunks (compartilhado).
-    QOpenGLVertexArrayObject m_lineQuadVao;
+
     // Membro: m_tractorVao
     // Tipo: QOpenGLVertexArrayObject
     // Descrição: VAO para o modelo 3D do trator.
     QOpenGLVertexArrayObject m_tractorVao;
 
-    // Membro: m_lineQuadVbo
-    // Tipo: QOpenGLBuffer
-    // Descrição: VBO para desenhar as bordas dos chunks (compartilhado).
-    QOpenGLBuffer m_lineQuadVbo;
 
     // Membro: m_tractorVbo
     // Tipo: QOpenGLBuffer

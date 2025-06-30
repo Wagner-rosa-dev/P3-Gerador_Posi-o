@@ -16,8 +16,6 @@ terrainmanager::terrainmanager() :
     QObject(nullptr), // Chama o construtor da classe base QObject.
     m_centerChunkX(0), // Inicializa a coordenada X do chunk central da grade.
     m_centerChunkZ(0), // Inicializa a coordenada Z do chunk central da grade.
-    m_lineQuadVaoRef(nullptr), // Inicializa a referência ao VAO das linhas.
-    m_lineQuadVboRef(nullptr), // Inicializa a referência ao VBO das linhas.
     m_glFuncsRef(nullptr) // Inicializa a referência para as funções OpenGL.
 {
     // Definimos o número máximo de threads que queremos usar para gerar chunks.
@@ -49,10 +47,8 @@ terrainmanager::~terrainmanager()
  * Armazena as referências necessárias, redimensiona a matriz de chunks
  * e inicia a grade de terreno centrada em (0,0).
  */
-void terrainmanager::init(const WorldConfig* config, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo, QOpenGLFunctions *glFuncs) {
+void terrainmanager::init(const WorldConfig* config, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
     m_config = config; // Armazena o ponteiro para a configuração do mundo.
-    m_lineQuadVaoRef = lineQuadVao; // Armazena a referência para o VAO das linhas.
-    m_lineQuadVboRef = lineQuadVbo; // Armazena a referência para o VBO das linhas.
     m_glFuncsRef = glFuncs; // Armazena a referência para as funções OpenGL.
 
     // Redimensiona a matriz de vetores para o tamanho da grade de renderização definida em m_config.
@@ -162,21 +158,12 @@ void terrainmanager::recenterGrid(int newCenterX, int newCenterZ){
  * Itera sobre todos os chunks na grade e chama seus métodos de renderização,
  * dependendo de qual shader foi fornecido (terreno ou linhas).
  */
-void terrainmanager::render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions *glFuncs) {
+void terrainmanager::render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs) {
     // Se o shader de terreno foi passado, desenhamos o terreno.
     if (terrainShaderProgram) {
         for (int i = 0; i < m_config->gridRenderSize; ++i) {
             for (int j = 0; j < m_config->gridRenderSize; ++j) {
                 m_chunks[i][j].render(terrainShaderProgram, glFuncs);
-            }
-        }
-    }
-    // Se o shader de linha foi passado, desenhamos as bordas.
-    if (lineShaderProgram) {
-        for (int i = 0; i < m_config->gridRenderSize; ++i) {
-            for (int j = 0; j < m_config->gridRenderSize; ++j) {
-                // Passa as referências compartilhadas do VAO e VBO das linhas para o chunk renderizar suas bordas.
-                m_chunks[i][j].renderBorders(lineShaderProgram, glFuncs, m_lineQuadVaoRef, m_lineQuadVboRef);
             }
         }
     }
@@ -194,8 +181,6 @@ void terrainmanager::render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLS
  */
 void terrainmanager::onMeshReady(int chunkX, int chunkZ, const chunk::MeshData& meshData)
 {
-    //qInfo() << "main thread: recebido malha pronta para chunk" << chunkX << "," << chunkZ;
-
     // Calcula a posição do chunk na nossa grade interna (matriz m_chunks).
     int grid_i = (chunkX - m_centerChunkX) + m_config->gridRenderSize / 2;
     int grid_j = (chunkZ - m_centerChunkZ) + m_config->gridRenderSize / 2;

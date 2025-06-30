@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include "speedcontroller.h"
+#include <memory>
 
 class GpsFilePlayer : public QObject
 {   Q_OBJECT
@@ -35,8 +36,8 @@ protected slots:
 
 
 private:
-    QFile *m_file;
-    QTextStream *m_textStream;
+    std::unique_ptr<QFile> m_file;
+    std::unique_ptr<QTextStream> m_textStream;
     QTimer m_playbackTimer;
 
 

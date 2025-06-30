@@ -45,7 +45,7 @@ public:
     //   - lineQuadVao: Ponteiro para o VAO do quad de linha (compartilhado).
     //   - lineQuadVbo: Ponteiro para o VBO do quad de linha (compartilhado).
     //   - glFuncs: Ponteiro para as funções OpenGL, necessário para operações de GPU.
-    void init(const WorldConfig* config, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo, QOpenGLFunctions *glFuncs);
+    void init(const WorldConfig* config, QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs);
 
     // Método: update
     // Descrição: Atualiza o estado do terreno com base na posição atual da câmera.
@@ -62,7 +62,7 @@ public:
     //   - terrainShaderProgram: Ponteiro para o programa de shader de terreno (pode ser nullptr para renderizar apenas bordas).
     //   - lineShaderProgram: Ponteiro para o programa de shader de linha (pode ser nullptr para renderizar apenas terreno).
     //   - glFuncs: Ponteiro para as funções OpenGL.
-    void render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions *glFuncs);
+    void render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs);
 
 private slots:
     // Slot Privado: onMeshReady
@@ -107,17 +107,6 @@ private:
     // Descrição: A coordenada Z da grade do chunk que está atualmente no centro da grade de renderização.
     int m_centerChunkZ;
 
-    // Membro: m_lineQuadVaoRef
-    // Tipo: QOpenGLVertexArrayObject*
-    // Descrição: Referência (ponteiro) ao VAO compartilhado usado para desenhar as bordas dos chunks.
-    //            Não possui a propriedade do objeto, apenas o utiliza.
-    QOpenGLVertexArrayObject* m_lineQuadVaoRef;
-
-    // Membro: m_lineQuadVboRef
-    // Tipo: QOpenGLBuffer*
-    // Descrição: Referência (ponteiro) ao VBO compartilhado usado para desenhar as bordas dos chunks.
-    //            Não possui a propriedade do objeto, apenas o utiliza.
-    QOpenGLBuffer* m_lineQuadVboRef;
 
     // Membro: m_glFuncsRef
     // Tipo: QOpenGLFunctions*

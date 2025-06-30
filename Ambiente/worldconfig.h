@@ -41,6 +41,16 @@ struct WorldConfig {
     //            Chunks mais próximos que essa distância usarão 'highRes', enquanto os mais distantes
     //            usarão 'lowRes'. É calculado com base no 'chunkSize'.
     float lodDistanceThreshold = chunkSize * 2.5f;
+
+    // Membro: gridSquareSize
+    // Tipo: float
+    // Descrição: O tamanho do lado de cada quadrado na grade do terreno ( em unidades do mundo)
+    float gridSquareSize = 1.0f; // um metro por quadrado
+
+    // Membro: gridLineThickness
+    // Tipo: float
+    // Descrição: A espessra visual das linhas do grid
+    float gridLineThickness = 0.05f; // 5 centimetros de espessura
 };
 
 #endif // WORLDCONFIG_H

@@ -299,25 +299,6 @@ void chunk::render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions 
     m_vao->release(); // Libera o VAO.
 }
 
-/**
- * @brief Renderiza as bordas do chunk.
- * @param lineShaderProgram O programa de shader de linha a ser usado.
- * @param glFuncs Ponteiro para as funções OpenGL.
- * @param lineQuadVao Ponteiro para o VAO do quad de linha (compartilhado).
- * @param lineQuadVbo Ponteiro para o VBO do quad de linha (compartilhado).
- *
- * Ativa o shader de linha, define a matriz de modelo do chunk e desenha
- * o quad de linha que representa as bordas do chunk.
- */
-void chunk::renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions* glFuncs, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo) {
-    // Retorna se o VAO das linhas não foi criado.
-    if (!lineQuadVao || !lineQuadVao->isCreated()) return;
-    // Define a matriz de modelo do chunk no shader de linha.
-    lineShaderProgram->setUniformValue("modelMatrix", m_modelMatrix);
-    lineQuadVao->bind(); // Ativa o VAO das linhas.
-    glFuncs->glDrawArrays(GL_TRIANGLES, 0, 12); // Desenha as linhas como triângulos (12 vértices para os dois quads).
-    lineQuadVao->release(); // Libera o VAO das linhas.
-}
 
 /**
  * @brief Reutiliza um objeto chunk existente em uma nova posição na grade.

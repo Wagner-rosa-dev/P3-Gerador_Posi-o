@@ -125,7 +125,7 @@ void SpeedController::handleReadyRead()
                         //Qtime nmeaTime = QTime::fromString(parts[1].left(6), "hhmmss");
                         currentGpsData.timestamp = QDateTime::currentDateTime(); //tempo atual da placa por simplicidade
 
-                        MY_LOG_DEBUG("GPS_PARSED", QString("GPRMC Parseado - Lat:%1 Lon:%2 Vel(nos):%3 Rumo:%4")
+                        MY_LOG_DEBUG("GPS_PARSED", QString("GNRMC Parseado - Lat:%1 Lon:%2 Vel(nos):%3 Rumo:%4")
                                                         .arg(currentGpsData.latitude, 0, 'f', 6)
                                                         .arg(currentGpsData.longitude, 0, 'f', 6)
                                                         .arg(currentGpsData.speedKnots, 0, 'f', 2)
@@ -147,7 +147,7 @@ void SpeedController::handleReadyRead()
                             currentGpsData.longitude = convertNmeaToDecimal(parts[4], parts[5]);
                             currentGpsData.timestamp = QDateTime::currentDateTime();
                         }
-                        MY_LOG_DEBUG("GPS_PARSED", QString("GPGGA Parseado = Alt:%1 Fix:%2 Sats:%3")
+                        MY_LOG_DEBUG("GPS_PARSED", QString("GNGGA Parseado = Alt:%1 Fix:%2 Sats:%3")
                                                         .arg(currentGpsData.altitude, 0, 'f', 2)
                                                         .arg(currentGpsData.fixQuality)
                                                         .arg(currentGpsData.numSatellites));

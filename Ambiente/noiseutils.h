@@ -35,12 +35,13 @@ inline float getHeight(float worldX, float worldZ) {
 inline QVector3D getNormal(float worldX, float worldZ) {
 
     float offset = 0.1f; // Pequeno deslocamento usado para amostrar a altura em pontos vizinhos.
-    float hL = getHeight(worldX - offset, worldZ); // Altura à esquerda do ponto.
-    float hR = getHeight(worldX - offset, worldZ); // Altura à direita do ponto (corrigido: deveria ser worldX + offset).
-    float hD = getHeight(worldX - offset, worldZ); // Altura para "baixo" (Z negativo) do ponto (corrigido: deveria ser worldZ - offset).
-    float hU = getHeight(worldX - offset, worldZ); // Altura para "cima" (Z positivo) do ponto (corrigido: deveria ser worldZ + offset).
+
+    float hX_minus  = getHeight(worldX - offset, worldZ); // Altura à esquerda do ponto.
+    float hX_Plus = getHeight(worldX + offset, worldZ); // Altura à direita do ponto (corrigido: deveria ser worldX + offset).
+    float hZ_minus = getHeight(worldX, worldZ - offset); // Altura para "baixo" (Z negativo) do ponto (corrigido: deveria ser worldZ - offset).
+    float hZ_plus = getHeight(worldX, worldZ + offset); // Altura para "cima" (Z positivo) do ponto (corrigido: deveria ser worldZ + offset).
     // Cálculo da normal usando as diferenças de altura. O vetor é então normalizado.
-    return QVector3D(hL - hR, 2.0f * offset, hD - hU).normalized();
+    return QVector3D(hX_minus - hX_Plus, 2.0f * offset, hZ_minus - hZ_plus).normalized();
 }
 }
 #endif // NOISEUTILS_H

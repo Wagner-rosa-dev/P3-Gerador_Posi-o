@@ -10,6 +10,7 @@
 #include <QElapsedTimer> // Inclui QElapsedTimer para medições de tempo precisas (FPS, temp).
 #include <cmath> // Inclui cmath para funções matemáticas como sin, cos, etc.
 #include "logger.h"
+#include "terraingrid.h"
 
 // Constantes com o código GLSL dos shaders
 // Estes blocos de string R"(...)" contêm o código-fonte GLSL para os shaders.
@@ -193,7 +194,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
         // Opcional: Adicione lógica aqui para lidar com o fim da reprodução (e.g., reiniciar, parar o app)
     });
 
-    m_gpsFilePlayer->startPlayback("/home/root/GPSTEXT.txt", 1000); // 100ms para simular um GPS de 10Hz
+    m_gpsFilePlayer->startPlayback("/home/root/GPSTEXT.txt", 500); // 100ms para simular um GPS de 10Hz
     MY_LOG_INFO("GPS_Input", "Usando reprodução de arquivo GPS (GpsFilePlayer).");
 #endif
 }
@@ -231,7 +232,7 @@ void MyGLWidget::initializeGL() {
     glEnable(GL_DEPTH_TEST); // Habilita o teste de profundidade para que objetos mais próximos cubram os mais distantes.
     glClearColor(0.53f, 0.81f, 0.92f, 1.0f); // Define a cor de fundo (céu) como azul claro.
 
-    MY_LOG_INFO("Render", "Compilando Terrain Shaders (Versão de Teste 04/06/2025)...");
+    MY_LOG_INFO("Render", "Compilando Terrain Shaders (Versão de Teste 30/06/2025)...");
     if (!m_terrainShaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex, terrainVertexShaderSource)) {
         MY_LOG_ERROR("Render", QString("Terrain Vertex Shader Compilation Error: %1").arg(m_terrainShaderProgram.log()));
     }
@@ -257,10 +258,10 @@ void MyGLWidget::initializeGL() {
         MY_LOG_INFO("Render", "Line Shaders linked successfully.");
     }
 
-    setupLineQuadVAO(); // Configura o VAO e VBO para o quad usado para desenhar as bordas dos chunks.
+    m_terrainGrid.init(&m_worldConfig, this);
     setupTractorGL(); // Configura os shaders, VAO e VBO para o trator.
     // Inicializa o TerrainManager, passando a configuração do mundo, programas de shader e referências para objetos GL.
-    m_terrainManager.init(&m_worldConfig, &m_terrainShaderProgram, &m_lineShaderProgram, &m_lineQuadVao, &m_lineQuadVbo, this);
+    m_terrainManager.init(&m_worldConfig, &m_terrainShaderProgram, this);
 
     // Define a posição inicial do trator e ajusta sua altura ao terreno.
     m_tractorPosition = QVector3D(0.0f, 0.0f, 0.0f); //definindo uma posição inical
@@ -271,49 +272,7 @@ void MyGLWidget::initializeGL() {
     m_tempReadTimer.start(); // Inicia o timer para leitura de temperatura.
 }
 
-/**
- * @brief Configura o Vertex Array Object (VAO) e Vertex Buffer Object (VBO) para desenhar um quad que representa as linhas das bordas dos chunks.
- *
- * Define as coordenadas dos vértices para um quad (na verdade, dois triângulos)
- * que formam a espessura da linha e o eleva ligeiramente para evitar z-fighting.
- */
-void MyGLWidget::setupLineQuadVAO() {
-    const float thickness = 0.05f; // Controla a espessura da linha.
-    const float y_offset = 0.01f; // Pequena elevação em relação ao terreno para evitar z-fighting (artefato visual quando dois polígonos estão na mesma profundidade).
 
-    const float s = m_worldConfig.chunkSize; // O tamanho do chunk, usado para dimensionar as linhas.
-    const float t = thickness / 2.0f; // Metade da espessura para cálculos simétricos.
-
-    // Define os vértices do quad da linha. São 12 floats (4 vértices * 3 componentes).
-    // Originalmente 2 quads (4 triângulos) para as bordas de um chunk, mas o comentário indica 2 bordas, total de 12 vértices.
-    // A lógica original dos vértices parece estar um pouco confusa ou incompleta para representar 4 bordas de um chunk.
-    GLfloat lineQuadVertices[] = {
-        // Borda Inferior (Z fixo) - representa a borda ao longo do eixo X
-        0.0f, y_offset, -t,      s, y_offset, -t,       s, y_offset, t,    // Triângulo 1
-        0.0f, y_offset, -t,      s, y_offset, t,        0.0f, y_offset, t,  // Triângulo 2
-        // Lado 2 (X fixo) - representa a borda ao longo do eixo Z (Cuidado: valores atuais parecem incorretos para uma borda vertical)
-        s-t, y_offset, 0.0f,     s+t, y_offset, 0.0f,   s+t, y_offset, s,
-        s-t, y_offset, 0.0f,     s+t, y_offset, s,      s-t, y_offset, s,
-    };
-
-    m_lineQuadVao.create(); // Cria o VAO para as linhas.
-    m_lineQuadVao.bind();   // Ativa o VAO.
-
-    m_lineQuadVbo.create(); // Cria o VBO para os dados dos vértices das linhas.
-    m_lineQuadVbo.bind();   // Ativa o VBO.
-    // Aloca e copia os dados dos vértices para o VBO na GPU.
-    m_lineQuadVbo.allocate(lineQuadVertices, sizeof(lineQuadVertices));
-
-    // Configura o ponteiro do atributo de vértice (layout location 0) para as posições.
-    if (m_lineShaderProgram.isLinked()) {
-        m_lineShaderProgram.enableAttributeArray(0);
-        m_lineShaderProgram.setAttributeBuffer(0, GL_FLOAT, 0, 3, 0);
-    } else {
-        qWarning("Line shader program not linked, cannot set attribute buffers for line quad VAO.");
-    }
-    m_lineQuadVao.release(); // Libera o VAO.
-    m_lineQuadVbo.release(); // Libera o VBO.
-}
 
 /**
  * @brief Função de desenho principal do OpenGL.
@@ -367,25 +326,18 @@ void MyGLWidget::paintGL() {
         m_terrainShaderProgram.setUniformValue("objectBaseColor", QVector3D(0.4f, 0.6f, 0.2f));
 
         // Pede para o TerrainManager renderizar apenas o terreno.
-        m_terrainManager.render(&m_terrainShaderProgram, nullptr, this);
+        m_terrainManager.render(&m_terrainShaderProgram, this);
 
         m_terrainShaderProgram.release(); // Desativa o programa de shader do terreno.
     }
 
-    // Renderiza as bordas dos chunks
+    // Renderiza o Grid (Nova Lógica)
     if (lineShaderOk) {
-        m_lineShaderProgram.bind(); // Ativa o programa de shader da linha.
-        // Define os uniformes da matriz de projeção e visão para o shader da linha.
-        m_lineShaderProgram.setUniformValue("projectionMatrix", m_camera.projectionMatrix());
-        m_lineShaderProgram.setUniformValue("viewMatrix", m_camera.viewMatrix());
-
-        // Define a cor da linha (amarelo).
-        m_lineShaderProgram.setUniformValue("lineColor", QColor(255, 255, 0, 255));
-
-        // Pede para o TerrainManager renderizar apenas as bordas.
-        m_terrainManager.render(nullptr, &m_lineShaderProgram, this);
-
-        m_lineShaderProgram.release(); // Desativa o programa de shader da linha.
+        // Atualiza a geometria do grid com a posição atual da câmera.
+        // O grid se estende pela área de renderização do TerrainManager (gridRenderSize chunks).
+        m_terrainGrid.updateGridGeometry(m_camera.position().x(), m_camera.position().z(), m_worldConfig.gridRenderSize);
+        // Renderiza o grid usando o shader de linha.
+        m_terrainGrid.render(&m_lineShaderProgram, m_camera.viewMatrix(), m_camera.projectionMatrix());
     }
 
     // Renderiza o trator
@@ -675,60 +627,19 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     emit coordinatesUpdate(m_kalmanFilter->getStatePosition().x(), m_kalmanFilter->getStatePosition().y());
 }
 
-//coverte coordenadas GPS para X/Z do mundo
-void MyGLWidget::updateTractorPositionFromGps(const GpsData& data) {
-    if (!m_hasReferenceCoordinate) {
-        m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
-        m_hasReferenceCoordinate = true;
-        //centraliza o trator no ponto inicial do mundo para evitar offsets muito grandes
-        m_tractorPosition.setX(0.0f);
-        m_tractorPosition.setZ(0.0f);
-        //qInfo() << "Coordenada de referencia GPS definida" << m_referenceCoordiante.latitude() << "," << m_referenceCoordinate.longitude();
-    } else {
-        QGeoCoordinate currentCoord(data.latitude, data.longitude);
-
-        // Calcula a distância Leste-Oeste (X) e Norte-Sul (Z) do ponto de referência.
-        // O QGeoCoordinate::distanceTo() retorna a distância em metros.
-        // AzimuthTo() retorna o rumo (bearing) da coordenada atual para a referência (0=N, 90=E, 180=S, 270=W)
-        // AzimuthFrom() retorna o rumo da referência para a coordenada atual.
-        // Precisamos da distância em X e Z.
-
-        //distancia total em metro
-        double distance = m_referenceCoordinate.distanceTo(currentCoord);
-        //Azimute de coordenada de referencia para coordenada atual
-        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord); // em graus
-        // Convertendo distância e azimute para componentes X e Z
-        // Assumindo que X aumenta para Leste e Z aumenta para Norte (ou diminui, dependendo do seu sistema)
-        // No seu sistema OpenGL, -Z é "para frente" (Norte), +X é "direita" (Leste).
-        // Um azimute de 0 (Norte) deveria levar a -Z.
-        // Um azimute de 90 (Leste) deveria levar a +X.
-        double radAzimuth = qDegreesToRadians(azimuth);
-
-        // Componente X (Leste/Oeste)
-        // Para Leste (90 deg), sin é 1. Para Oeste (270 deg), sin é -1.
-        double deltaX = distance * qSin(radAzimuth);
-        // Componente Z (Norte/Sul)
-        // Para Norte (0 deg), cos é 1. Para Sul (180 deg), cos é -1.
-        // Como o seu Z aponta para "trás" (ou -Z é "frente"), precisamos inverter o sinal
-        double deltaZ = distance * qCos(radAzimuth);
-
-        m_tractorPosition.setX(static_cast<float>(deltaX));
-        m_tractorPosition.setZ(static_cast<float>(-deltaZ));
-    }
-}
 
 //Verifica se o trator esta em linha reta ou fazendo curva
 void MyGLWidget::checkMovementStatus() {
-    //Requer pelo menos dois pontos de dados GPS para comaparar
+    //Requer pelo menos dois pontos de dados GPS para comparar
     if (!m_lastGpsData.isValid || !m_currentGpsData.isValid) {
         emit movementStatusUpdated("Aguardando dados GPS...");
         return;
     }
 
     //limites de tolerancia
-    const float SPEED_THRESHOLD = 0.5f; //Metros/segundos, abaixo disso é considerado parado
+    const float SPEED_THRESHOLD = 0.5f; //limite de velocidade para considerar o trator parado relação m/s
     const float HEADIND_CHANGE_THRESHOLD = 2.0f; // Graus, mudança maxima para ser considerado linha reta
-    const float COORD_CHANGE_PROPORTIONALITY_THRESHOLD = 0.1f; // limite para proporicionalidade (idealmente baixo)
+    //const float COORD_CHANGE_PROPORTIONALITY_THRESHOLD = 0.1f; // limite para proporicionalidade (idealmente baixo)
 
     //considerar parado se a velocidade for muito baixa
     if (m_tractorSpeed < SPEED_THRESHOLD) {
@@ -736,7 +647,7 @@ void MyGLWidget::checkMovementStatus() {
         return;
     }
 
-    //Variação do rumo (heading)
+    //Variação do rumo (heading) entre leitura atual e leitura anterior
     float headingDelta = m_currentGpsData.courseOverGround - m_lastGpsData.courseOverGround;
     //normalizar a variação para estar entre -180 e 180 graus
     if (headingDelta > 180.0f) headingDelta -= 360.0f;
@@ -745,39 +656,11 @@ void MyGLWidget::checkMovementStatus() {
     //Verificar se esta fazendo curva
     if (qAbs(headingDelta) > HEADIND_CHANGE_THRESHOLD) {
         emit movementStatusUpdated("Fazendo Curva!");
-        return;
+    } else {
+        emit movementStatusUpdated("Em linha reta");
     }
 
-    // Verificar proporcionalidade da mudança de latitude/longitude para linha reta
-    // Isso é um pouco mais complexo e pode ser redundante se o rumo já for suficiente.
-    // Para uma linha reta, a proporção entre a mudança de Latitude e a mudança de Longitude
-    // deve ser aproximadamente constante (ou a variação de uma delas muito pequena se o movimento for alinhado a um eixo).
-    // Ou, mais robusto: a direção do movimento (azimute entre pontos) deve ser muito próxima ao rumo.
-
-    QGeoCoordinate lastCoord(m_lastGpsData.latitude, m_currentGpsData.longitude);
     QGeoCoordinate currentCoord(m_currentGpsData.latitude, m_currentGpsData.longitude);
 
-    //calcula o azimute entre o ponto anterior e o ponto atual
-    double pathAzimuth = lastCoord.azimuthTo(currentCoord);
-
-    //diferaça entre o rumo do gps e o azimute do caminho real
-    float azimuthDifference = qAbs(pathAzimuth - m_currentGpsData.courseOverGround);
-    //normalizar a diferença
-    if (azimuthDifference > 180.0f) azimuthDifference = 360.0f - azimuthDifference;
-
-    //se a diferença entre o azimute do caminho e or umo do gps for pequena, e o rumo nao mudou muito
-    if (azimuthDifference < COORD_CHANGE_PROPORTIONALITY_THRESHOLD) {
-        //assume linha reta se o rumo nao mudou siginificamente e
-        // a direção inserida pelos pontos esta alinhada com o rumo do GPS
-        emit movementStatusUpdated("em linha reta");
-    } else {
-        // Se o rumo mudou pouco mas a proporcionalidade não se manteve,
-        // pode ser ruído ou movimento muito sutil.
-        // Para este caso, vamos considerar "Movimento Impreciso" ou continuar com a última determinação.
-        // Por simplicidade, se não foi curva e não está perfeitamente alinhado,
-        // podemos deixar a lógica do heading Delta decidir ou um estado de transição.
-        // Ou simplesmente: se o heading Delta é pequeno, é linha reta. O azimute de pontos valida.
-        emit movementStatusUpdated("Movimento!"); // Ou um status mais genérico se não for claramente curva ou reta
-    }
 }
 

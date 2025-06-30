@@ -104,15 +104,6 @@ public:
     chunk(const chunk& other) = delete;
     chunk& operator=(const chunk& other) = delete;
 
-    // Método: init (DEPRECATED - Não mais usado para inicialização principal, substituído por recycle e workers)
-    // Descrição: Anteriormente usado para inicializar o chunk com suas coordenadas de grade e contexto OpenGL.
-    //            Agora, a inicialização e atualização da malha são tratadas por `recycle` e `generateMeshData`
-    //            em conjunto com `uploadMeshData` através de threads.
-    // Parâmetros:
-    //   - cX: Coordenada X do chunk na grade.
-    //   - cZ: Coordenada Z do chunk na grade.
-    //   - glFuncs: Ponteiro para as funções OpenGL.
-    void init(int cX, int cZ, QOpenGLFunctions *glFuncs);
 
     // Método: recycle
     // Descrição: Reutiliza um objeto chunk existente, redefinindo suas coordenadas de grade
@@ -152,16 +143,6 @@ public:
     //   - terrainShaderProgram: O programa de shader OpenGL a ser usado para renderizar o terreno.
     //   - glFuncs: Ponteiro para as funções OpenGL.
     void render(QOpenGLShaderProgram* terrainShaderProgram, QOpenGLFunctions *glFuncs);
-
-    // Método: renderBorders
-    // Descrição: Desenha as bordas do chunk na tela usando o shader de linha fornecido.
-    //            Útil para visualização da grade de chunks.
-    // Parâmetros:
-    //   - lineShaderProgram: O programa de shader OpenGL a ser usado para renderizar as linhas.
-    //   - glFuncs: Ponteiro para as funções OpenGL.
-    //   - lineQuadVao: O VAO para o quad da linha (normalmente compartilhado entre chunks).
-    //   - lineQuadVbo: O VBO para o quad da linha (normalmente compartilhado entre chunks).
-    void renderBorders(QOpenGLShaderProgram* lineShaderProgram, QOpenGLFunctions* glFuncs, QOpenGLVertexArrayObject* lineQuadVao, QOpenGLBuffer* lineQuadVbo);
 
     // Método: setLOD
     // Descrição: Define o Nível de Detalhe (LOD) atual para o chunk.

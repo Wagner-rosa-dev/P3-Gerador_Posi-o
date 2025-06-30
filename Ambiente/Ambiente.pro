@@ -20,6 +20,7 @@ SOURCES += \
     myglwidget.cpp \
     noiseutils.cpp \
     speedcontroller.cpp \
+    terraingrid.cpp \
     terrainmanager.cpp
 
 HEADERS += \
@@ -33,6 +34,7 @@ HEADERS += \
     myglwidget.h \
     noiseutils.h \
     speedcontroller.h \
+    terraingrid.h \
     terrainmanager.h \
     worldconfig.h
 
