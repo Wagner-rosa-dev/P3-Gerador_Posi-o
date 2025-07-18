@@ -17,6 +17,9 @@ public:
 
     ~GpsFilePlayer();
 
+
+
+
 public slots:
     void startPlayback(const QString &filePath, int intervaMs = 100);
 
@@ -39,6 +42,9 @@ private:
     std::unique_ptr<QFile> m_file;
     std::unique_ptr<QTextStream> m_textStream;
     QTimer m_playbackTimer;
+
+
+
 
 
 };

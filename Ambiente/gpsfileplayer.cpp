@@ -128,7 +128,6 @@ void GpsFilePlayer::processNextLine()
     int checksumIndex = line.lastIndexOf('*');
     if (checksumIndex == -1 || checksumIndex + 3 > line.length()) { //verifica se * existe e ha 2 digitos após ele
         MY_LOG_WARNING("GpsFilePlayer_parse", QString("Sentença NMEA invalida (checksum ausente ou incompleto): %1").arg(line));
-        QTimer::singleShot(0, this, &GpsFilePlayer::processNextLine);
         return;
     }
 
@@ -142,7 +141,7 @@ void GpsFilePlayer::processNextLine()
                                                   .arg(line)
                                                   .arg(receivedChecksumStr)
                                                   .arg(calculateNmeaChecksum(nmeaMessage), 2, 16, QChar('0')));
-        QTimer::singleShot(0, this, &GpsFilePlayer::processNextLine);
+
         return;
     }
 
@@ -153,14 +152,21 @@ void GpsFilePlayer::processNextLine()
         QString sentenceHeader = parts[0]; // Ex: "$GPRMC" ou "$GNRMC"
 
         QDateTime messageDateTime = QDateTime::currentDateTime();
+
         if (parts.size() > 1 && !parts[1].isEmpty()) {
             QTime nmeaTime = QTime::fromString(parts[1].left(6), "hhmmss.zz");
             if (nmeaTime.isValid()) {
                 messageDateTime.setTime(nmeaTime);
             }
         }
-        currentGpsData.timestamp = messageDateTime;
 
+        if (sentenceHeader.endsWith("RMC") && parts.size() >= 10 && !parts[9].isEmpty()) {
+            QDate nmeaDate = QDate::fromString(parts[9], "ddMMyy");
+            if(nmeaDate.isValid()) {
+                messageDateTime.setDate(nmeaDate);
+            }
+        }
+        currentGpsData.timestamp = messageDateTime;
 
         if (sentenceHeader.endsWith("RMC")) { // Verifica se termina com "RMC" (para GPRMC, GNRMC, etc.)
             if (parts.size() >= 11) {
@@ -209,6 +215,5 @@ void GpsFilePlayer::processNextLine()
     } else {
         MY_LOG_WARNING("GpsFilePlayer_Parsed", QString("Dados GPS inválidos ou sentença NMEA não reconhecida/válida: %1").arg(line));
         // Se a linha não for válida, processa a próxima imediatamente para não atrasar o playback
-        QTimer::singleShot(0, this, &GpsFilePlayer::processNextLine);
     }
 }

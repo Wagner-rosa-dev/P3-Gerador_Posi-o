@@ -1,4 +1,4 @@
-QT       += core gui opengl serialport positioning
+QT       += core gui opengl serialport location
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

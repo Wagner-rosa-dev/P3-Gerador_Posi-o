@@ -57,21 +57,6 @@ void KalmanFilter::reset(double newX, double newZ) {
     P(2,2) = 10.0;  //Incerteza na Velocidade X
     P(3,3) = 10.0; // Incerteza na Velocidade Z
 
-    //Redimensiona a matriz de covariancia do ruido do processo (Q) para n_x por n_x
-    //e inicializa (valroes baixos se o modelo de movimento for confiavel)
-    Q.resize(n_x, n_x);
-    Q.setZero(); // Inicializa com zeros
-
-    //Velores para uido do processo (Q) - ajuste fino necessario
-    //Esses valores representam a incerteza no nosso modelo de moviemnto
-    double dt_nominal = 0.016; // Tempo nominal entre ataulizações
-    double accel_noise_pos = 0.5 * qPow(dt_nominal, 2); // ruido de aceleração impactando posição
-    double accel_noise_vel = dt_nominal; // Ruido de aceleração impactando velocidade
-
-    Q(0,0) = qPow(accel_noise_pos, 2); //Q_Px
-    Q(1,1) = qPow(accel_noise_pos, 2); //Q_Px
-    Q(2,2) = qPow(accel_noise_vel, 2); //Q_Vx
-    Q(3,3) = qPow(accel_noise_vel, 2); //Q_Vz
 
     //Redimensiona a matriz de covariancia do ruidmo de medição (R) para n_z por n_z
     // e inicializa (valores baseados na precisão do sensor, e.g., GPS)
@@ -99,19 +84,12 @@ void KalmanFilter::predict(double dt) {
         return;
     }
 
-    //Garante que o dt seja positivo e razoavel para evitar instabilidade
-    if (dt <= 0) dt = 0.016; // Tempo minimo de 16ms (aprox. 60 FPS) se dt for zero ou negativo
+    const double MIN_DT = 0.001;
+    if (dt < MIN_DT) {
+        MY_LOG_WARNING("Kalman", QString("dt muito pequeno (%1ms). Usando dt minimo de %2ms").arg(dt*1000).arg(MIN_DT*1000));
+        dt = MIN_DT;
+    }
 
-    //novo log do estado antes da predição
-    //x[0]=Px, x[1]=Pz, x[2]=Vx, x[3]=Vz.
-    MY_LOG_DEBUG("kalman_predict", QString("IN x_antes_pred: Px=%1 Pz=%2 Vx=%3 Vz=%4")
-                                        .arg(x[0], 0, 'f', 3).arg(x[1], 0, 'f', 3)
-                                        .arg(x[2], 0, 'f', 3).arg(x[3], 0, 'f', 3));
-    //log da incerteza (variancia da posição) ANTES da predição
-    //P(0,0) é a variancia da posição X, P(1,1) é a variancia da posição Z
-    //Valores altos siginifcam mais incerteza
-    MY_LOG_DEBUG("kalman_Predict", QString("in P_antes_pred(0,0)=%1 P(1,1)=%2")
-                                       .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
 
     //gerar os sigmas points
     Eigen::MatrixXd X_sigma_points = generateSigmaPoints(x, P);
@@ -125,8 +103,6 @@ void KalmanFilter::predict(double dt) {
         X_predicted_sigma_point.col(i) = processModel(X_sigma_points.col(i), dt);
     }
 
-    //reconstruir a media e covariancia do estado predito
-
     //Media predita (x_pred): reconstruida a partir dos sigma points propagados e seus pesos Wm
     Eigen::VectorXd x_pred = Eigen::VectorXd::Zero(n_x);
     for (int i = 0; i < 2 * n_x + 1; ++i) {
@@ -139,6 +115,25 @@ void KalmanFilter::predict(double dt) {
         Eigen::VectorXd diff = X_predicted_sigma_point.col(i) - x_pred;
         P_pred += Wc(i) * diff * diff.transpose();
     }
+
+    Eigen::MatrixXd Q_dynamic(n_x, n_x);
+    Q_dynamic.setZero();
+    //parametros de ruido de aceleração (ajuste conforme a dinamica do trator)
+    double sigma_ax = 0.05; //Desvio padrao da aceleração no eixo X
+    double sigma_az = 0.05; //Desvio padrão da aceleração no eixo Z
+
+    double q_accel_x = sigma_ax * sigma_ax;
+    double q_accel_z = sigma_az * sigma_az;
+
+    Q_dynamic(0,0) = 0.25 * qPow(dt, 4) * q_accel_x; // Px
+    Q_dynamic(1,1) = 0.25 * qPow(dt, 4) * q_accel_z; // Pz
+    Q_dynamic(2,2) = qPow(dt, 2) * q_accel_x; // Vx
+    Q_dynamic(3,3) = qPow(dt, 2) * q_accel_z; // Vz
+
+    Q_dynamic(0,2) = 0.5 * qPow(dt, 3) * q_accel_x; // Px
+    Q_dynamic(2,0) = Q_dynamic(0,2); // Px
+    Q_dynamic(1,3) = 0.5 * qPow(dt, 3) * q_accel_z; // Px
+    Q_dynamic(3,1) = Q_dynamic(1,3); // Px
 
     //Adicionar a covariancia do ruido do processo (Q) a covariancia predita
     P_pred += Q;

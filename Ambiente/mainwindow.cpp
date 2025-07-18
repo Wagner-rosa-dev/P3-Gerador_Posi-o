@@ -4,6 +4,10 @@
 #include <QGridLayout>  // Inclui QGridLayout para organizar os widgets em uma grade.
 #include <QFont>        // Inclui QFont para estilizar o texto dos labels.
 #include <QVBoxLayout>  // Inclui QVBoxLayout para organizar widgets verticalmente.
+#include "gpsfileplayer.h"
+#include "kalmanfilter.h"
+#include <QMessageBox>
+#include "logger.h"
 
 /**
  * @brief Construtor da classe MainWindow.
@@ -27,7 +31,14 @@ MainWindow::MainWindow(QWidget *parent)
     m_kmLabel = new QLabel("Velocidade: 0.0 km/h", this);
     m_lonlabel = new QLabel("Lon: 0.0",this);
     m_latLabel = new QLabel("Lat: 0.0", this);
-    m_movementStatusLabel = new QLabel("Status: --", this); // novo label
+    m_movementStatusLabel = new QLabel("Status: Parado", this); // novo label
+
+    m_gpsFilePlayer = new GpsFilePlayer(this);
+
+    m_kalmanFilter = new KalmanFilter(0.0, 0.0);
+    m_lastGpsTimestamp = QDateTime();
+
+
 
     // 2. Estiliza os labels para que fiquem bem visíveis:
     QFont labelFont("Arial", 12, QFont::Bold); // Define a fonte para os labels.
@@ -80,6 +91,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_glWidget, &MyGLWidget::coordinatesUpdate, this, &MainWindow::updateCoordinatesLabel);
     //conecta o novo sinal do myglwidget ao slot desta janela
     connect(m_glWidget, &MyGLWidget::movementStatusUpdated, this, &MainWindow::updateMovementStatusLabel);
+    //conecta o novo sinal do kalman filter depois de receber os dados do GPS
+    connect(m_gpsFilePlayer, &GpsFilePlayer::gpsDataUpdate, this, &MainWindow::handleGpsDataUpdate);
 
     resize(800, 600); // Define o tamanho inicial da janela.
 }
@@ -145,4 +158,35 @@ void MainWindow::updateCoordinatesLabel(float lon, float lat)
 void MainWindow::updateMovementStatusLabel(const QString& status)
 {
     m_movementStatusLabel->setText(QString("Status: %1").arg(status));
+}
+
+void MainWindow::handleGpsDataUpdate(const GpsData& data) {
+    if (!data.isValid) {
+        return;
+    }
+
+    double dt_seconds = 0.0;
+    if (m_lastGpsTimestamp.isValid()) {
+        qint64 msDiff = m_lastGpsTimestamp.msecsTo(data.timestamp);
+        dt_seconds = static_cast<double>(msDiff) / 1000.0;
+    } else {
+        dt_seconds = 0.016;
+    }
+    m_lastGpsTimestamp = data.timestamp;
+
+    double measuredX = data.longitude;
+    double measuredZ = data.latitude;
+
+    m_kalmanFilter->predict(dt_seconds);
+    m_kalmanFilter->update(measuredX, measuredZ);
+
+    QVector2D estimatedPosition = m_kalmanFilter->getStatePosition();
+    QVector2D estimatedVelocity = m_kalmanFilter->getStateVelocity();
+
+    MY_LOG_DEBUG("MainWindow", QString("GPS Estimado: Px=%1 Pz=%2 Vx=%3 Vz=%4")
+                                    .arg(estimatedPosition.x(), 0, 'f', 3)
+                                    .arg(estimatedPosition.y(), 0, 'f', 3)
+                                    .arg(estimatedVelocity.x(), 0, 'f', 3)
+                                    .arg(estimatedVelocity.y(), 0, 'f', 3));
+
 }

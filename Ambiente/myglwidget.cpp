@@ -12,6 +12,7 @@
 #include "logger.h"
 #include "terraingrid.h"
 
+
 // Constantes com o código GLSL dos shaders
 // Estes blocos de string R"(...)" contêm o código-fonte GLSL para os shaders.
 // Eles são compilados e linkados em tempo de execução.

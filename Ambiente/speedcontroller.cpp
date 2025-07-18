@@ -20,7 +20,7 @@ double convertNmeaToDecimal(const QString& nmeaValue, const QString& hemisphere)
         decimalDegrees *= -1.0;
     }
     return decimalDegrees;
-}
+    }
 }
 
 

@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QWidget> // Classe base para a janela principal da aplicação.
+#include "kalmanfilter.h"
+#include "gpsfileplayer.h"
 
 // Declarações antecipadas para evitar inclusões circulares
 // Descrição: Permitem que MainWindow declare ponteiros para QLabel e MyGLWidget
@@ -34,6 +36,10 @@ public:
     //            automaticamente destruídos pelo sistema de parentesco do Qt.
     ~MainWindow();
 
+
+
+
+
 private slots:
 
     // Slot: updateFpsLabel
@@ -63,6 +69,8 @@ private slots:
 
     //novo slot para o status de movimento
     void updateMovementStatusLabel(const QString& status);
+
+    void handleGpsDataUpdate(const GpsData& data);
 
 private:
     // Membro: m_glWidget
@@ -97,6 +105,14 @@ private:
 
     //novo label
     QLabel *m_movementStatusLabel;
+
+    KalmanFilter* m_kalmanFilter;
+    QDateTime m_lastGpsTimestamp;
+    GpsFilePlayer *m_gpsFilePlayer;
+
+
+
+
 };
 
 #endif // MAINWINDOW_H
