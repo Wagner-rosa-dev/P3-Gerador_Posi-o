@@ -32,15 +32,20 @@ MainWindow::MainWindow(QWidget *parent)
     m_lonlabel = new QLabel("Lon: 0.0",this);
     m_latLabel = new QLabel("Lat: 0.0", this);
     m_movementStatusLabel = new QLabel("Status: Parado", this); // novo label
-
     m_gpsFilePlayer = new GpsFilePlayer(this);
-
     m_kalmanFilter = new KalmanFilter(0.0, 0.0);
     m_lastGpsTimestamp = QDateTime();
 
+    m_profileLabel = new QLabel("Perfil do filtro:", this);
+    m_profileSelector = new QComboBox(this);
+    m_profileSelector->addItem("Padrão");
+    m_profileSelector->addItem("Veículo Lento");
+    m_profileSelector->addItem("Veículo Àgil");
 
 
-    // 2. Estiliza os labels para que fiquem bem visíveis:
+
+
+    //* 2. Estiliza os labels para que fiquem bem visíveis:
     QFont labelFont("Arial", 12, QFont::Bold); // Define a fonte para os labels.
     m_fpsLabel->setFont(labelFont); // Aplica a fonte ao label de FPS.
     m_fpsLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de FPS.
@@ -54,6 +59,11 @@ MainWindow::MainWindow(QWidget *parent)
     m_lonlabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de longitude.
     m_movementStatusLabel->setFont(labelFont); // Aplica a fonte ao label no status de movimento
     m_movementStatusLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de longitude.
+    m_profileLabel->setFont(labelFont);
+    m_profileLabel->setStyleSheet("color: white");
+    m_profileSelector->setStyleSheet("color: black; background-color: white; padding: 2px");
+
+
 
 
     // Cria um layout de grade para sobrepor os widgets.
@@ -67,6 +77,8 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addWidget(m_fpsLabel, 0, 0, Qt::AlignTop | Qt::AlignLeft);      // FPS no canto superior esquerdo.
     mainLayout->addWidget(m_tempLabel, 0, 0, Qt::AlignTop | Qt::AlignRight);    // Temperatura no canto superior direito.
     mainLayout->addWidget(m_kmLabel, 0, 0, Qt::AlignBottom | Qt::AlignLeft);    // Velocidade no canto inferior esquerdo.
+    mainLayout->addWidget(m_profileLabel, 6, 0);
+    mainLayout->addWidget(m_profileSelector, 7, 0);
 
     // Cria um layout vertical para as coordenadas. e o status de movimento
     QVBoxLayout *coordStatusLayout = new QVBoxLayout;
@@ -93,8 +105,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_glWidget, &MyGLWidget::movementStatusUpdated, this, &MainWindow::updateMovementStatusLabel);
     //conecta o novo sinal do kalman filter depois de receber os dados do GPS
     connect(m_gpsFilePlayer, &GpsFilePlayer::gpsDataUpdate, this, &MainWindow::handleGpsDataUpdate);
+    //Quando o usuario mudar a seleção, o sot onProfileChanged sera chamado
+    connect(m_profileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onProfileChanged);
 
     resize(800, 600); // Define o tamanho inicial da janela.
+
+    onProfileChanged(0);
 }
 
 /**
@@ -189,4 +205,19 @@ void MainWindow::handleGpsDataUpdate(const GpsData& data) {
                                     .arg(estimatedVelocity.x(), 0, 'f', 3)
                                     .arg(estimatedVelocity.y(), 0, 'f', 3));
 
+}
+
+void MainWindow::onProfileChanged(int index)
+{
+    QString selectedProfileText = m_profileSelector->itemText(index);
+    MY_LOG_INFO("UI", QString("Perfil do filtro alterado para: %1").arg(selectedProfileText));
+
+    // Verifica se o perfil selecionado existe no nosso mapa de perfis
+    if (PREDEFINED_PROFILES.contains(selectedProfileText)) {
+        // Pega o perfil correspondente
+        FilterProfile selectedProfile = PREDEFINED_PROFILES[selectedProfileText];
+
+        // Pega o ponteiro para o filtro de Kalman através do MyGLWidget e define o novo perfil
+        m_glWidget->getKalmanFilter()->setProfile(selectedProfile);
+    }
 }

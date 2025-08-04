@@ -59,6 +59,8 @@ public:
     //            dos objetos relacionados ao GL.
     ~MyGLWidget();
 
+    KalmanFilter* getKalmanFilter() const { return m_kalmanFilter; }
+
 signals:
     // Sinais (Anúncios que a classe faz):
     // Descrição: Estes sinais são emitidos pelo MyGLWidget para notificar outras partes
@@ -210,6 +212,15 @@ private:
     // Tipo: QOpenGLBuffer
     // Descrição: VBO para o modelo 3D do trator.
     QOpenGLBuffer m_tractorVbo;
+
+    float m_tractorCurrentSpeed;
+    float m_tractorTargetSpeed;
+    float m_steeringAngle;
+
+    const float WHEELBASE = 3.0f;
+    const float MAX_STEERING_ANGLE = 0.5;
+
+    QElapsedTimer m_gameTickTimer;
 
     // Membro: m_terrainShaderProgram
     // Tipo: QOpenGLShaderProgram

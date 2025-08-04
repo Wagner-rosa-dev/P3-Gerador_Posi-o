@@ -1,4 +1,4 @@
-QT       += core gui opengl serialport location positioning
+QT       += core gui opengl serialport positioning
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -27,6 +27,7 @@ HEADERS += \
     camera.h \
     chunk.h \
     chunkworker.h \
+    filterprofiles.h \
     gpsfileplayer.h \
     kalmanfilter.h \
     logger.h \

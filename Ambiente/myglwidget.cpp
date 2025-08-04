@@ -154,6 +154,9 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     : QOpenGLWidget(parent), // Chama o construtor da classe base QOpenGLWidget.
     m_tractorRotation(0), // Inicializa a rotação do trator.
     m_extraFunction(nullptr), // Inicializa o ponteiro para funções extras OpenGL.
+    m_tractorCurrentSpeed(0.0f),
+    m_tractorTargetSpeed(0.0f),
+    m_steeringAngle(0.0f),
     m_tractorSpeed(0.0f), // Inicializa a velocidade do trator.
     m_steeringValue(50), // Inicializa o valor de direção (centro).
     m_hasReferenceCoordinate(false), // inicializa como falso
@@ -167,7 +170,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     // Inicia o timer para disparar a cada 16 milissegundos, o que corresponde a aproximadamente 60 quadros por segundo (1000ms / 16ms = 62.5 FPS).
     m_timer.start(16);
 
-    //#define USE_LIVE_GPS
+    #define USE_LIVE_GPS
 
 #ifdef USE_LIVE_GPS
     // Nova lógica do controlador:
@@ -198,6 +201,8 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     m_gpsFilePlayer->startPlayback("/home/root/GPSTEXT.txt", 500); // 100ms para simular um GPS de 10Hz
     MY_LOG_INFO("GPS_Input", "Usando reprodução de arquivo GPS (GpsFilePlayer).");
 #endif
+
+    m_gameTickTimer.start();
 }
 
 /**
@@ -431,6 +436,33 @@ void MyGLWidget::resizeGL(int w, int h) {
  * - Reagendamento da função paintGL() para redesenhar a cena.
  */
 void MyGLWidget::gameTick() {
+    //Calcula o delta tempo
+    double dt = m_gameTickTimer.restart() / 1000.0;
+
+    //logica de controle
+    const float lerpFactor = 1.0f;
+    m_tractorCurrentSpeed = (1.0f - lerpFactor) * m_tractorCurrentSpeed + lerpFactor * m_tractorTargetSpeed;
+
+    float steeringRatio = m_tractorCurrentSpeed * tan(m_steeringAngle) / WHEELBASE;
+    m_tractorRotation += qRadiansToDegrees(steeringRatio * dt);
+
+    float angleRad = qDegreesToRadians(m_tractorRotation);
+    QVector3D forwardVector(sin(angleRad), 0.0f, -cos(angleRad));
+    m_tractorPosition += forwardVector * m_tractorCurrentSpeed * dt;
+
+    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+
+    if (m_kalmanFilter && m_kalmanFilter->isInitialized()) {
+        QVector2D estimatePos = m_kalmanFilter->getStatePosition();
+        QVector3D kalmanPosition(estimatePos.x(), m_tractorPosition.y(), estimatePos.y());
+
+        float distanceToKalman = m_tractorPosition.distanceToPoint(kalmanPosition);
+
+        if(distanceToKalman > 0.5f) {
+            m_tractorPosition += (kalmanPosition - m_tractorPosition) * 0.1;
+        }
+    }
+
     // Lógica de leitura de temperatura da CPU (a cada 2 segundos):
     if (m_tempReadTimer.elapsed() >= 2000) { // Verifica se 2 segundos se passaram desde a última leitura.
         //qInfo() << "Timer de 2s atingido. tentando ler a temperatura..";
@@ -469,6 +501,7 @@ void MyGLWidget::gameTick() {
     // Calcula a velocidade em Km/h (velocidade em unidades/segundo * 3.6 para converter para Km/h).
     float speedkm = m_tractorSpeed * 3.6f;
     emit kmUpdated(speedkm); // Emite o sinal `kmUpdated` com a velocidade em Km/h.
+    emit coordinatesUpdate(m_tractorPosition.x(), m_tractorPosition.z());
 
     update();
 }
@@ -534,6 +567,9 @@ void MyGLWidget::onSpeedUpdate(float newSpeed)
  */
 void MyGLWidget::onSteeringUpdate(int steeringValue) {
     m_steeringValue = steeringValue; // Atualiza o valor de esterçamento do trator.
+
+    float steeringNormalized = static_cast<float>(steeringValue - 50) / 50.0f;
+    m_steeringAngle = steeringNormalized * MAX_STEERING_ANGLE;
 }
 
 void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
@@ -545,8 +581,9 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
         return;
     }
 
-    m_tractorSpeed = m_currentGpsData.speedKnots * 0.514444f;
+    m_tractorTargetSpeed = m_currentGpsData.speedKnots * 0.514444f;
     m_currentHeading = m_currentGpsData.courseOverGround;
+    m_tractorRotation = -m_currentHeading;
 
     double deltaX_world = 0.0;
     double deltaZ_world = 0.0;
@@ -586,46 +623,14 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
 
         if (m_lastGpsData.isValid) {
             m_kalmanFilter->predict(dt);
+
         }
-
-        m_kalmanFilter->update(deltaX_world, deltaZ_world);
-
-        QVector2D estimatedPosition = m_kalmanFilter->getStatePosition();
-        QVector2D estimatedVelocity = m_kalmanFilter->getStateVelocity();
-
-        m_tractorPosition.setX(estimatedPosition.x());
-        m_tractorPosition.setZ(estimatedPosition.y());
-
-        m_tractorSpeed = estimatedVelocity.length();
-        const float MIN_VISUAL_SPEED_THRESHOLD = 0.2;
-
-        //Se a velocidade estimada for menor que o limiar, consideramos o trator parado
-        if (m_tractorSpeed < MIN_VISUAL_SPEED_THRESHOLD) {
-            m_tractorSpeed = 0.0f; // FOrça a velocidade para zero
+            m_kalmanFilter->update(deltaX_world, deltaZ_world);
         }
-
-        m_currentHeading = qRadiansToDegrees(qAtan2(estimatedVelocity.x(), -estimatedVelocity.y()));
-
-
-    } else {
-        m_tractorPosition.setX(static_cast<float>(deltaX_world));
-        m_tractorPosition.setZ(static_cast<float>(deltaZ_world));
-        MY_LOG_WARNING("GPS_Processor", "Kalman Filter não inicializado, usando posição bruta.");
-    }
-
-    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
-    m_tractorRotation = -m_currentHeading;
-
-    checkMovementStatus();
 
     m_lastGpsData = m_currentGpsData;
+    checkMovementStatus();
 
-    // --- NOVO: Log da posição e rotação finais do trator na tela ---
-    MY_LOG_DEBUG("Render_Final", QString("Trator Final - Pos(X,Z): %1,%2 Rotação:%3 Velocidade:%4")
-                                     .arg(m_tractorPosition.x(), 0, 'f', 3).arg(m_tractorPosition.z(), 0, 'f', 3)
-                                     .arg(m_tractorRotation, 0, 'f', 2).arg(m_tractorSpeed, 0, 'f', 2));
-
-    emit coordinatesUpdate(m_kalmanFilter->getStatePosition().x(), m_kalmanFilter->getStatePosition().y());
 }
 
 

@@ -1,5 +1,6 @@
 #include "kalmanfilter.h"
 #include "logger.h"
+#include "filterprofiles.h"
 
 //Construtor: incializa o filtro com um estado inicial
 KalmanFilter::KalmanFilter(double initialX, double initialZ)
@@ -8,10 +9,31 @@ KalmanFilter::KalmanFilter(double initialX, double initialZ)
     alpha(0.001), // Valores tipicos, ajuste fino pode ser necessario
     beta(2.0), //Valor ideal para contibuição Gaussiana
     kappa(0.0), //Geralmente 0 para sistemas de baixo dimensionalidade
-    m_isInitialized(false) // inicializa o flag de inicializaçõa como falso
+    m_isInitialized(false)// inicializa o flag de inicializaçõa como falso
+
 
 {
+    setProfile(PREDEFINED_PROFILES["Veículo Lento"]);
+
     reset(initialX, initialZ); // chama o metodo reset para configurar o filtro
+}
+
+void KalmanFilter::setProfile(const FilterProfile &profile)
+{
+    MY_LOG_INFO("Kalman", QString("Atualizando perfil do filtro. R=%1, Q=%2")
+                                .arg(profile.R_measurement_uncertainty)
+                                .arg(profile.Q_process_uncertainty));
+
+    m_R.resize(2, 2);
+    m_R.setIdentity();
+    m_R *= profile.R_measurement_uncertainty;
+
+    m_Q.resize(4, 4);
+    m_Q.setIdentity();
+    m_Q *= profile.Q_process_uncertainty;
+
+    calculateWeights();
+
 }
 
 void KalmanFilter::calculateWeights() {
@@ -41,36 +63,21 @@ void KalmanFilter::calculateWeights() {
 //Descrição: Inicializa todos os vetores e matrizes do filtro de kalman para um novo estado
 //           isso é util no inicio da aplicação ou se o filtro perder a estabilidade
 //           devido a dados muito ruidosos ou inconsistentes
-void KalmanFilter::reset(double newX, double newZ) {
-    //Redimensiona o vetor de estado para n_X dimensoes e inicializa com zeros
-    x.resize(n_x);
-    x.setZero();
-    x(0) = newX; //Posição X inicial
-    x(1) = newZ; //Posição Z inicial
+void KalmanFilter::reset(double initialX, double initialZ) {
 
-    //Redimensiona a matriz de covariancia do erro de estimativa (P) para n_x por n_x
-    // e inicializa com uma alta incerteza na diagonal
-    P.resize(n_x, n_x);
-    P.setIdentity(); // Define como matriz identidade
-    P(0,0) = 100.0; // Incerteza na Posição X
-    P(1,1) = 100.0; // Incerteza na Posição Z
-    P(2,2) = 10.0;  //Incerteza na Velocidade X
-    P(3,3) = 10.0; // Incerteza na Velocidade Z
+    m_state.resize(4);
+    m_state(0) = initialX;
+    m_state(1) = initialZ;
+    m_state(2) = 0;
+    m_state(3) = 0;
+
+    m_P.resize(4, 4);
+    m_P.setIdentity(); // Reseta a covariância do erro
+    m_P *= 1000; // Começa com uma incerteza alta
 
 
-    //Redimensiona a matriz de covariancia do ruidmo de medição (R) para n_z por n_z
-    // e inicializa (valores baseados na precisão do sensor, e.g., GPS)
-    R.resize(n_z, n_z);
-    R.setZero(); // Inicializa com zeros
 
-    float gpsNoise = 2.0f; // 2 metros de desvio padrao do GPS
-    R(0,0) = qPow(gpsNoise, 2); //Ruido na medição da Posição X
-    R(1,1) = qPow(gpsNoise, 2); //Ruido na medição da Posição Z
-
-    //Calcula os pesos dos sigma points com base nos parametros n_x, alpha, beta, kappa
-    calculateWeights();
-
-    m_isInitialized = true;
+    m_isInitialized = false;
     m_lastMeasurementTime = QDateTime::currentDateTime();
     MY_LOG_INFO("kalman", "Filtro de kalman UKF reiniciado com sucesso");
 }

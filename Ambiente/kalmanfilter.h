@@ -9,6 +9,7 @@
 #include <Eigen>
 #include <Dense>
 #include <QDebug>
+#include "filterprofiles.h"
 
 // Classe: KalmanFilter
 // Descrição: Implementa um filtro de Kalman linear para estimar a posição e velocidade 2D
@@ -23,7 +24,7 @@ public:
     // Parâmetros:
     //   - initialX: Posição X inicial no mundo.
     //   - initialZ: Posição Z inicial no mundo.
-    KalmanFilter(double initialX, double initialZ);
+    explicit KalmanFilter(double initialX = 0.0, double initialZ = 0.0);
 
     // Método: predict
     // Descrição: Executa a fase de predição do filtro de Kalman.
@@ -55,8 +56,17 @@ public:
     //Método: reset
     //Descrição: Reinicia o filtro com um novo estado inicial.
     //           Util se a incertez ficar muito alta ou se houver um salto brusco nos dados
-    void reset(double newX, double newZ);
+    void reset(double initialX = 0.0, double initialZ = 0.0);
 
+    void setProfile(const FilterProfile& profile);
+
+    bool isInitialized() const {
+        return m_isInitialized;
+    }
+
+
+signals:
+    void filteredPositionReady(const QVector3D& filteredPosition);
 
 
 private:
@@ -100,6 +110,20 @@ private:
     //Calcula os pesos dos sigma points
     void calculateWeights();
 
+    int m_n; // Dimensão do estado (e.g., 4 para x, z, vx, vz)
+    int m_m; // Dimensão da medição (e.g., 2 para x, z)
+
+    // Matrizes e vetores do UKF
+    // OBSERVAÇÃO: As variáveis m_Q e m_R já estão declaradas aqui.
+    // Não é necessário adicioná-las.
+    Eigen::VectorXd m_state;     // Vetor de estado [x, z, vx, vz]'
+    Eigen::MatrixXd m_P;         // Matriz de covariância do erro do estado
+    Eigen::MatrixXd m_Q;         // Matriz de covariância do ruído do processo
+    Eigen::MatrixXd m_R;         // Matriz de covariância do ruído da medição
+
+    // Pesos para os sigma points
+    Eigen::VectorXd m_Wm; // Pesos para a média
+    Eigen::VectorXd m_Wc; // Pesos para a covariância
 };
 
 #endif // KALMANFILTER_H

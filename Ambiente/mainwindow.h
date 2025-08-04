@@ -4,6 +4,7 @@
 #include <QWidget> // Classe base para a janela principal da aplicação.
 #include "kalmanfilter.h"
 #include "gpsfileplayer.h"
+#include <QComboBox>
 
 // Declarações antecipadas para evitar inclusões circulares
 // Descrição: Permitem que MainWindow declare ponteiros para QLabel e MyGLWidget
@@ -72,6 +73,8 @@ private slots:
 
     void handleGpsDataUpdate(const GpsData& data);
 
+    void onProfileChanged(int index);
+
 private:
     // Membro: m_glWidget
     // Tipo: MyGLWidget*
@@ -109,6 +112,9 @@ private:
     KalmanFilter* m_kalmanFilter;
     QDateTime m_lastGpsTimestamp;
     GpsFilePlayer *m_gpsFilePlayer;
+
+    QLabel *m_profileLabel;
+    QComboBox *m_profileSelector;
 
 
 
