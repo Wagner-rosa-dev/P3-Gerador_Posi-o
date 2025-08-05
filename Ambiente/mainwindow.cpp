@@ -4,8 +4,6 @@
 #include <QGridLayout>  // Inclui QGridLayout para organizar os widgets em uma grade.
 #include <QFont>        // Inclui QFont para estilizar o texto dos labels.
 #include <QVBoxLayout>  // Inclui QVBoxLayout para organizar widgets verticalmente.
-#include "gpsfileplayer.h"
-#include "kalmanfilter.h"
 #include <QMessageBox>
 #include "logger.h"
 
@@ -32,8 +30,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_lonlabel = new QLabel("Lon: 0.0",this);
     m_latLabel = new QLabel("Lat: 0.0", this);
     m_movementStatusLabel = new QLabel("Status: Parado", this); // novo label
-    m_gpsFilePlayer = new GpsFilePlayer(this);
-    m_kalmanFilter = new KalmanFilter(0.0, 0.0);
     m_lastGpsTimestamp = QDateTime();
 
     m_profileLabel = new QLabel("Perfil do filtro:", this);
@@ -103,8 +99,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_glWidget, &MyGLWidget::coordinatesUpdate, this, &MainWindow::updateCoordinatesLabel);
     //conecta o novo sinal do myglwidget ao slot desta janela
     connect(m_glWidget, &MyGLWidget::movementStatusUpdated, this, &MainWindow::updateMovementStatusLabel);
-    //conecta o novo sinal do kalman filter depois de receber os dados do GPS
-    connect(m_gpsFilePlayer, &GpsFilePlayer::gpsDataUpdate, this, &MainWindow::handleGpsDataUpdate);
     //Quando o usuario mudar a seleção, o sot onProfileChanged sera chamado
     connect(m_profileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onProfileChanged);
 
@@ -176,36 +170,6 @@ void MainWindow::updateMovementStatusLabel(const QString& status)
     m_movementStatusLabel->setText(QString("Status: %1").arg(status));
 }
 
-void MainWindow::handleGpsDataUpdate(const GpsData& data) {
-    if (!data.isValid) {
-        return;
-    }
-
-    double dt_seconds = 0.0;
-    if (m_lastGpsTimestamp.isValid()) {
-        qint64 msDiff = m_lastGpsTimestamp.msecsTo(data.timestamp);
-        dt_seconds = static_cast<double>(msDiff) / 1000.0;
-    } else {
-        dt_seconds = 0.016;
-    }
-    m_lastGpsTimestamp = data.timestamp;
-
-    double measuredX = data.longitude;
-    double measuredZ = data.latitude;
-
-    m_kalmanFilter->predict(dt_seconds);
-    m_kalmanFilter->update(measuredX, measuredZ);
-
-    QVector2D estimatedPosition = m_kalmanFilter->getStatePosition();
-    QVector2D estimatedVelocity = m_kalmanFilter->getStateVelocity();
-
-    MY_LOG_DEBUG("MainWindow", QString("GPS Estimado: Px=%1 Pz=%2 Vx=%3 Vz=%4")
-                                    .arg(estimatedPosition.x(), 0, 'f', 3)
-                                    .arg(estimatedPosition.y(), 0, 'f', 3)
-                                    .arg(estimatedVelocity.x(), 0, 'f', 3)
-                                    .arg(estimatedVelocity.y(), 0, 'f', 3));
-
-}
 
 void MainWindow::onProfileChanged(int index)
 {

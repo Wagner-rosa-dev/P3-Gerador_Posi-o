@@ -71,7 +71,6 @@ private slots:
     //novo slot para o status de movimento
     void updateMovementStatusLabel(const QString& status);
 
-    void handleGpsDataUpdate(const GpsData& data);
 
     void onProfileChanged(int index);
 
@@ -109,9 +108,7 @@ private:
     //novo label
     QLabel *m_movementStatusLabel;
 
-    KalmanFilter* m_kalmanFilter;
     QDateTime m_lastGpsTimestamp;
-    GpsFilePlayer *m_gpsFilePlayer;
 
     QLabel *m_profileLabel;
     QComboBox *m_profileSelector;

@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MainWindow_t {
-    QByteArrayData data[18];
-    char stringdata0[189];
+    QByteArrayData data[15];
+    char stringdata0[156];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -45,18 +45,14 @@ QT_MOC_LITERAL(9, 92, 3), // "lon"
 QT_MOC_LITERAL(10, 96, 3), // "lat"
 QT_MOC_LITERAL(11, 100, 25), // "updateMovementStatusLabel"
 QT_MOC_LITERAL(12, 126, 6), // "status"
-QT_MOC_LITERAL(13, 133, 19), // "handleGpsDataUpdate"
-QT_MOC_LITERAL(14, 153, 7), // "GpsData"
-QT_MOC_LITERAL(15, 161, 4), // "data"
-QT_MOC_LITERAL(16, 166, 16), // "onProfileChanged"
-QT_MOC_LITERAL(17, 183, 5) // "index"
+QT_MOC_LITERAL(13, 133, 16), // "onProfileChanged"
+QT_MOC_LITERAL(14, 150, 5) // "index"
 
     },
     "MainWindow\0updateFpsLabel\0\0fps\0"
     "updateTempLabel\0temp\0updateKmLabel\0"
     "km\0updateCoordinatesLabel\0lon\0lat\0"
     "updateMovementStatusLabel\0status\0"
-    "handleGpsDataUpdate\0GpsData\0data\0"
     "onProfileChanged\0index"
 };
 #undef QT_MOC_LITERAL
@@ -67,7 +63,7 @@ static const uint qt_meta_data_MainWindow[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       7,   14, // methods
+       6,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -75,13 +71,12 @@ static const uint qt_meta_data_MainWindow[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    1,   49,    2, 0x08 /* Private */,
-       4,    1,   52,    2, 0x08 /* Private */,
-       6,    1,   55,    2, 0x08 /* Private */,
-       8,    2,   58,    2, 0x08 /* Private */,
-      11,    1,   63,    2, 0x08 /* Private */,
-      13,    1,   66,    2, 0x08 /* Private */,
-      16,    1,   69,    2, 0x08 /* Private */,
+       1,    1,   44,    2, 0x08 /* Private */,
+       4,    1,   47,    2, 0x08 /* Private */,
+       6,    1,   50,    2, 0x08 /* Private */,
+       8,    2,   53,    2, 0x08 /* Private */,
+      11,    1,   58,    2, 0x08 /* Private */,
+      13,    1,   61,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void, QMetaType::Int,    3,
@@ -89,8 +84,7 @@ static const uint qt_meta_data_MainWindow[] = {
     QMetaType::Void, QMetaType::Float,    7,
     QMetaType::Void, QMetaType::Float, QMetaType::Float,    9,   10,
     QMetaType::Void, QMetaType::QString,   12,
-    QMetaType::Void, 0x80000000 | 14,   15,
-    QMetaType::Void, QMetaType::Int,   17,
+    QMetaType::Void, QMetaType::Int,   14,
 
        0        // eod
 };
@@ -106,8 +100,7 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 2: _t->updateKmLabel((*reinterpret_cast< float(*)>(_a[1]))); break;
         case 3: _t->updateCoordinatesLabel((*reinterpret_cast< float(*)>(_a[1])),(*reinterpret_cast< float(*)>(_a[2]))); break;
         case 4: _t->updateMovementStatusLabel((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 5: _t->handleGpsDataUpdate((*reinterpret_cast< const GpsData(*)>(_a[1]))); break;
-        case 6: _t->onProfileChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 5: _t->onProfileChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -142,13 +135,13 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 7)
+        if (_id < 6)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 7;
+        _id -= 6;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 7)
+        if (_id < 6)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 7;
+        _id -= 6;
     }
     return _id;
 }

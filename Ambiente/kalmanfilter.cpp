@@ -77,7 +77,7 @@ void KalmanFilter::reset(double initialX, double initialZ) {
 
 
 
-    m_isInitialized = false;
+    m_isInitialized = true;
     m_lastMeasurementTime = QDateTime::currentDateTime();
     MY_LOG_INFO("kalman", "Filtro de kalman UKF reiniciado com sucesso");
 }
@@ -99,7 +99,7 @@ void KalmanFilter::predict(double dt) {
 
 
     //gerar os sigmas points
-    Eigen::MatrixXd X_sigma_points = generateSigmaPoints(x, P);
+    Eigen::MatrixXd X_sigma_points = generateSigmaPoints(m_state, m_P);
 
     //Matrix para armazenar os sigma points propagados pelo modelo de processo
     Eigen::MatrixXd X_predicted_sigma_point = Eigen::MatrixXd::Zero(n_x, 2 * n_x + 1);
@@ -143,19 +143,19 @@ void KalmanFilter::predict(double dt) {
     Q_dynamic(3,1) = Q_dynamic(1,3); // Px
 
     //Adicionar a covariancia do ruido do processo (Q) a covariancia predita
-    P_pred += Q;
+    P_pred += m_Q;
 
     //Atulaiza o estado e a covariancia internos da classe
-    x = x_pred;
-    P = P_pred;
+    m_state = x_pred;
+    m_P = P_pred;
 
     //log do estado Depois da predição
     MY_LOG_DEBUG("kalman_Predict", QString("OUT x_pred: Px=%1 Pz=%2 Vx=%3 Vz=%4")
-                                        .arg(x[0], 0, 'f', 3).arg(x[1], 0, 'f', 3)
-                                        .arg(x[2], 0, 'f', 3).arg(x[3], 0, 'f', 3));
+                                        .arg(m_state[0], 0, 'f', 3).arg(m_state[1], 0, 'f', 3)
+                                        .arg(m_state[2], 0, 'f', 3).arg(m_state[3], 0, 'f', 3));
     //log da incerteza (variancias da posição) depois da predição
     MY_LOG_DEBUG("Kalman_predict", QString("OUT P_pred(0,0)=%1 P(1,1)=%2")
-                                       .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
+                                       .arg(m_P(0,0), 0, 'f', 3).arg(m_P(1,1), 0, 'f', 3));
 }
 
 //FAse de atualização
@@ -176,7 +176,7 @@ void KalmanFilter::update(double measuredX, double measuredZ) {
     MY_LOG_DEBUG("Kalman_Update", QString("IN z_measured(X,Z): %1,%2").arg(measuredX, 0, 'f', 3).arg(measuredZ, 0, 'f', 3));
 
     //Gerar sigma points a aprtir do estado predito atual
-    Eigen::MatrixXd X_sigma_points_pred = generateSigmaPoints(x, P);
+    Eigen::MatrixXd X_sigma_points_pred = generateSigmaPoints(m_state, m_P);
 
     //MAtrix para armazenar os sigma points propagados pelo modelo de medição
     Eigen::MatrixXd Z_sigma_points = Eigen::MatrixXd::Zero(n_z, 2 * n_x +1);
@@ -200,12 +200,12 @@ void KalmanFilter::update(double measuredX, double measuredZ) {
     }
 
     //Adicionar a covariancia do ruido de medição (R)
-    P_zz += R;
+    P_zz += m_R;
 
     //calcular covariancia cruzada(P_zz)
     Eigen::MatrixXd P_xz = Eigen::MatrixXd::Zero(n_x, n_z);
     for (int i = 0; i < 2 * n_x + 1; ++i) {
-        Eigen::VectorXd diff_x = X_sigma_points_pred.col(i) - x; // x é a média predita do estado
+        Eigen::VectorXd diff_x = X_sigma_points_pred.col(i) - m_state; // x é a média predita do estado
         Eigen::VectorXd diff_z = Z_sigma_points.col(i) - z_pred;
         P_xz += Wc(i) * diff_x * diff_z.transpose();
     }
@@ -236,23 +236,23 @@ void KalmanFilter::update(double measuredX, double measuredZ) {
                                       .arg(y(0), 0, 'f', 3).arg(y(1), 0, 'f', 3));
 
     // 7. Atualizar Estado (x) e Covariância (P)
-    x = x + K * y;
-    P = P - K * P_zz * K.transpose();
+    m_state = m_state + K * y;
+    m_P = m_P - K * P_zz * K.transpose();
 
     MY_LOG_DEBUG("Kalman_Update", QString("OUT x_est: Px=%1 Pz=%2 Vx=%3 Vz=%4")
-                                      .arg(x(0), 0, 'f', 3).arg(x(1), 0, 'f', 3)
-                                      .arg(x(2), 0, 'f', 3).arg(x(3), 0, 'f', 3));
+                                      .arg(m_state(0), 0, 'f', 3).arg(m_state(1), 0, 'f', 3)
+                                      .arg(m_state(2), 0, 'f', 3).arg(m_state(3), 0, 'f', 3));
     MY_LOG_DEBUG("Kalman_Update", QString("OUT P_est(0,0):%1 P_est(1,1):%2")
-                                      .arg(P(0,0), 0, 'f', 3).arg(P(1,1), 0, 'f', 3));
+                                      .arg(m_P(0,0), 0, 'f', 3).arg(m_P(1,1), 0, 'f', 3));
 }
 //Retorna a posição (X, Z) estimada
 QVector2D KalmanFilter::getStatePosition() const {
-    return QVector2D(x[0], x[1]);
+    return QVector2D(m_state[0], m_state[1]);
 }
 
 //Retorna a velocidade (Vx, Vz) estimada
 QVector2D KalmanFilter::getStateVelocity() const {
-    return QVector2D(x[2], x[3]);
+    return QVector2D(m_state[2], m_state[3]);
 }
 
 //modelo de processo Não Linear(f): Como o estado evolui no tempo

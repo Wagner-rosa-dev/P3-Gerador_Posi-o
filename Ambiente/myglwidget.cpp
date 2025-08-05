@@ -436,30 +436,30 @@ void MyGLWidget::resizeGL(int w, int h) {
  * - Reagendamento da função paintGL() para redesenhar a cena.
  */
 void MyGLWidget::gameTick() {
-    //Calcula o delta tempo
     double dt = m_gameTickTimer.restart() / 1000.0;
 
-    //logica de controle
-    const float lerpFactor = 1.0f;
-    m_tractorCurrentSpeed = (1.0f - lerpFactor) * m_tractorCurrentSpeed + lerpFactor * m_tractorTargetSpeed;
-
-    float steeringRatio = m_tractorCurrentSpeed * tan(m_steeringAngle) / WHEELBASE;
-    m_tractorRotation += qRadiansToDegrees(steeringRatio * dt);
-
-    float angleRad = qDegreesToRadians(m_tractorRotation);
-    QVector3D forwardVector(sin(angleRad), 0.0f, -cos(angleRad));
-    m_tractorPosition += forwardVector * m_tractorCurrentSpeed * dt;
-
-    m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
-
+    // A nova lógica de estado agora vive aqui dentro.
     if (m_kalmanFilter && m_kalmanFilter->isInitialized()) {
-        QVector2D estimatePos = m_kalmanFilter->getStatePosition();
-        QVector3D kalmanPosition(estimatePos.x(), m_tractorPosition.y(), estimatePos.y());
+        // 1. PREDIÇÃO: O trabalho do gameTick agora é avançar o estado do filtro no tempo.
+        //    O filtro usa seu modelo interno de velocidade constante para prever a próxima posição.
+        m_kalmanFilter->predict(dt);
 
-        float distanceToKalman = m_tractorPosition.distanceToPoint(kalmanPosition);
+        // 2. ATUALIZAÇÃO DO VISUAL: Pegamos a posição e velocidade diretamente do estado ATUALIZADO do filtro.
+        QVector2D filtered_pos = m_kalmanFilter->getStatePosition();
+        QVector2D filtered_vel = m_kalmanFilter->getStateVelocity();
 
-        if(distanceToKalman > 0.5f) {
-            m_tractorPosition += (kalmanPosition - m_tractorPosition) * 0.1;
+        // Atualiza a posição 3D do trator com base na saída do filtro.
+        m_tractorPosition.setX(filtered_pos.x());
+        m_tractorPosition.setZ(filtered_pos.y()); // Lembre-se que o Y do filtro é o Z do nosso mundo.
+        m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+
+        // A velocidade também vem direto do filtro (magnitude do vetor velocidade).
+        m_tractorCurrentSpeed = filtered_vel.length();
+
+        // A rotação (direção) também é derivada da velocidade.
+        if (m_tractorCurrentSpeed > 0.1) { // Só atualiza a direção se estiver se movendo
+            // Usamos atan2 para obter o ângulo do vetor velocidade.
+            m_tractorRotation = -qRadiansToDegrees(qAtan2(filtered_vel.x(), -filtered_vel.y()));
         }
     }
 
@@ -588,20 +588,13 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     double deltaX_world = 0.0;
     double deltaZ_world = 0.0;
 
-    // --- NOVO: Log da Lat/Lon bruta recebida ---
     MY_LOG_DEBUG("GPS_Processor", QString("GPS Bruto (Lat, Lon): %1,%2").arg(data.latitude, 0, 'f', 6).arg(data.longitude, 0, 'f', 6));
 
-
-    if (!m_hasReferenceCoordinate) {
-        m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
-        m_hasReferenceCoordinate = true;
-        m_kalmanFilter = new KalmanFilter(0.0, 0.0);
-        // Usando MY_LOG_INFO
-        MY_LOG_INFO("GPS_Processor", "Coordenada de referencia GPS definida e Kalman Filter inicializado.");
-
-        // NOVO: Log da primeira medição bruta convertida
-        MY_LOG_DEBUG("GPS_Processor", QString("Primeira Medição Bruta (X_mundo, Z_mundo): %1,%2").arg(deltaX_world, 0, 'f', 3).arg(deltaZ_world, 0, 'f', 3));
-    } else {
+    if (m_kalmanFilter && !m_kalmanFilter->isInitialized()) {
+        if (!m_hasReferenceCoordinate) {
+            m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
+            m_hasReferenceCoordinate = true;
+        }
         QGeoCoordinate currentCoord(data.latitude, data.longitude);
         double distance = m_referenceCoordinate.distanceTo(currentCoord);
         double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
@@ -610,16 +603,20 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
         deltaX_world = distance * qSin(radAzimuth);
         deltaZ_world = -distance * qCos(radAzimuth);
 
-        // --- NOVO: Log das coordenadas X/Z do mundo antes do Kalman ---
-        MY_LOG_DEBUG("GPS_Processor", QString("Coordenadas X/Z Brutas (Mundo): %1,%2").arg(deltaX_world, 0, 'f', 3).arg(deltaZ_world, 0, 'f', 3));
-    }
+        m_kalmanFilter->reset(deltaX_world, deltaZ_world);
+        MY_LOG_INFO("GPS_Processor", "Filtro de Kalman inicializado com a primeira coordenada valida");
 
-    if (m_kalmanFilter) {
+
+    } else if (m_kalmanFilter) {
+        QGeoCoordinate currentCoord(data.latitude, data.longitude);
+        double distance = m_referenceCoordinate.distanceTo(currentCoord);
+        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
+        double radAzimuth = qDegreesToRadians(azimuth);
+        deltaX_world = distance * qSin(radAzimuth);
+        deltaZ_world = -distance * qCos(radAzimuth);
+
         double dt = m_lastGpsData.timestamp.msecsTo(m_currentGpsData.timestamp) / 1000.0;
         if (dt <= 0) dt = 0.016;
-
-        // --- NOVO: Log do Delta Tempo (dt) ---
-        MY_LOG_DEBUG("GPS_Processor", QString("Delta Tempo (dt): %1").arg(dt, 0, 'f', 3));
 
         if (m_lastGpsData.isValid) {
             m_kalmanFilter->predict(dt);

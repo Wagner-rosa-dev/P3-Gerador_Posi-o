@@ -81,95 +81,61 @@ void TerrainGrid::init(const WorldConfig* config, QOpenGLFunctions* glFuncs) {
  * A lógica de geração de vértices será implementada em uma etapa posterior.
  */
 void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCameraWorldZ, int terrainRenderSizeChunks) {
-    if (!m_glFuncsRef || !m_config) { // Verifica se a inicialização foi bem-sucedida
+ if (!m_glFuncsRef || !m_config) {
         MY_LOG_ERROR("TerrainGrid", "Tentativa de atualizar geometria do grid sem inicialização adequada.");
         return;
     }
 
-    // Calcula o centro do grid com base na posição da câmera e no tamanho do chunk.
-    // O grid deve se alinhar com a grade de chunks para cobrir a área correta.
-    int currentCenterGridX = static_cast<int>(qFloor(currentCameraWorldX / m_config->chunkSize));
-    int currentCenterGridZ = static_cast<int>(qFloor(currentCameraWorldZ / m_config->chunkSize));
-
-    // Ajusta o centro para a grade visual do grid (não a grade de chunks, mas os quadrados individuais)
-    // Isso garante que o grid se mova suavemente e se alinhe com a grade global de coordenadas,
-    // em vez de pular apenas quando a câmera entra em um novo chunk.
-    float gridWorldOffsetX = currentCenterGridX * m_config->chunkSize;
-    float gridWorldOffsetZ = currentCenterGridZ * m_config->chunkSize;
-
-    // A matriz de modelo do grid será usada para posicionar a grade no mundo, centralizando-a
-    // em relação à posição do jogador, mas alinhada à grade de chunks.
-    m_modelMatrix.setToIdentity();
-    m_modelMatrix.translate(gridWorldOffsetX, 0.0f, gridWorldOffsetZ);
-
-
-    // Verifica se a área visível do grid mudou significativamente para justificar uma regeneração.
-    // Usamos um limiar que é a metade do tamanho de um chunk. Se o centro da câmera mudou
-    // mais do que isso em relação ao último centro de regeneração do grid, regeneramos.
-    // Isso ajuda a evitar regenerações excessivas para pequenos movimentos.
-    // Para um grid que se estende por *todo* o terreno renderizado, basta verificar se
-    // o centro do CHUNK da câmera mudou, ou se é a primeira vez.
-
-    if (currentCenterGridX != m_lastCenterGridX || currentCenterGridZ != m_lastCenterGridZ || m_vertexCount == 0) {
-        MY_LOG_INFO("TerrainGrid", QString("Regenerando geometria do grid. Centro de chunks: X:%1, Z:%2. Câmera mundo: X:%3, Z:%4")
-                                       .arg(currentCenterGridX).arg(currentCenterGridZ).arg(currentCameraWorldX).arg(currentCameraWorldZ));
-
-        m_lastCenterGridX = currentCenterGridX;
-        m_lastCenterGridZ = currentCenterGridZ;
+    // A geometria da grade só precisa ser gerada uma vez, a menos que o tamanho de renderização mude.
+    if (m_vertexCount == 0) {
+        MY_LOG_INFO("TerrainGrid", QString("Gerando geometria do grid. Tamanho da grade: %1 chunks.").arg(terrainRenderSizeChunks));
 
         std::vector<float> gridVertices;
-        float y_offset = 0.01f; // Elevação para evitar z-fighting com o terreno.
-        float line_half_thickness = m_config->gridLineThickness / 2.0f; // Metade da espessura da linha.
+        float y_offset = 0.01f;
+        float line_half_thickness = m_config->gridLineThickness / 2.0f;
 
-        // Calcula a extensão total do grid em unidades do mundo.
-        // O grid deve cobrir a área de 'gridRenderSize' chunks.
+        // A grade é gerada centrada em (0,0) no seu próprio espaço de modelo.
         float totalGridWorldSize = static_cast<float>(terrainRenderSizeChunks) * m_config->chunkSize;
+        float halfGridSize = totalGridWorldSize / 2.0f;
 
-        // Calcula o número de linhas e colunas que precisamos no grid.
-        int numGridLines = static_cast<int>(totalGridWorldSize / m_config->gridSquareSize) + 1; // +1 para incluir a última linha/coluna
+        int numGridLines = static_cast<int>(totalGridWorldSize / m_config->gridSquareSize) + 1;
 
-        // Gerar linhas paralelas ao eixo X (linhas horizontais)
+        // Gerar linhas paralelas ao eixo X (horizontais)
         for (int i = 0; i < numGridLines; ++i) {
-            float z = i * m_config->gridSquareSize; // Posição Z da linha
-            float x_start = 0.0f;
-            float x_end = totalGridWorldSize;
+            float z = (i * m_config->gridSquareSize) - halfGridSize;
+            float x_start = -halfGridSize;
+            float x_end = halfGridSize;
 
-            // Triângulo 1
             gridVertices.push_back(x_start);          gridVertices.push_back(y_offset); gridVertices.push_back(z - line_half_thickness);
             gridVertices.push_back(x_end);            gridVertices.push_back(y_offset); gridVertices.push_back(z - line_half_thickness);
             gridVertices.push_back(x_end);            gridVertices.push_back(y_offset); gridVertices.push_back(z + line_half_thickness);
 
-            // Triângulo 2
             gridVertices.push_back(x_start);          gridVertices.push_back(y_offset); gridVertices.push_back(z - line_half_thickness);
             gridVertices.push_back(x_end);            gridVertices.push_back(y_offset); gridVertices.push_back(z + line_half_thickness);
             gridVertices.push_back(x_start);          gridVertices.push_back(y_offset); gridVertices.push_back(z + line_half_thickness);
         }
 
-        // Gerar linhas paralelas ao eixo Z (linhas verticais)
+        // Gerar linhas paralelas ao eixo Z (verticais)
         for (int i = 0; i < numGridLines; ++i) {
-            float x = i * m_config->gridSquareSize; // Posição X da linha
-            float z_start = 0.0f;
-            float z_end = totalGridWorldSize;
+            float x = (i * m_config->gridSquareSize) - halfGridSize;
+            float z_start = -halfGridSize;
+            float z_end = halfGridSize;
 
-            // Triângulo 1
             gridVertices.push_back(x - line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_start);
             gridVertices.push_back(x + line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_start);
             gridVertices.push_back(x + line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_end);
 
-            // Triângulo 2
             gridVertices.push_back(x - line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_start);
             gridVertices.push_back(x + line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_end);
             gridVertices.push_back(x - line_half_thickness); gridVertices.push_back(y_offset); gridVertices.push_back(z_end);
         }
 
-        m_vertexCount = static_cast<int>(gridVertices.size() / 3); // Cada vértice tem 3 componentes (X, Y, Z)
+        m_vertexCount = static_cast<int>(gridVertices.size() / 3);
 
         if (m_vertexCount > 0) {
             m_vbo.bind();
-            // Aloca e envia os dados. Usamos QOpenGLBuffer::StaticDraw para otimizar,
-            // pois os dados não mudarão frequentemente uma vez que o grid é regenerado.
             m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
-            m_vbo.allocate(gridVertices.data(), QOpenGLBuffer::StaticDraw);
+            m_vbo.allocate(gridVertices.data(), gridVertices.size() * sizeof(float));
             m_vbo.release();
             MY_LOG_INFO("TerrainGrid", QString("Grid gerado com %1 vértices.").arg(m_vertexCount));
         } else {
@@ -177,6 +143,12 @@ void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCam
         }
     }
 }
+
+
+
+
+
+
 
 /**
  * @brief Desenha a grade na tela.
@@ -186,19 +158,29 @@ void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCam
  */
 void TerrainGrid::render(QOpenGLShaderProgram* lineShaderProgram, const QMatrix4x4& viewMatrix, const QMatrix4x4& projectionMatrix) {
     if (m_vertexCount == 0 || !m_vao.isCreated()) {
-        return; // Não renderiza se não houver vértices ou o VAO não foi criado.
+        return;
     }
 
     lineShaderProgram->bind();
     lineShaderProgram->setUniformValue("projectionMatrix", projectionMatrix);
     lineShaderProgram->setUniformValue("viewMatrix", viewMatrix);
-    lineShaderProgram->setUniformValue("modelMatrix", m_modelMatrix); // A matriz de modelo será a identidade se não houver translação.
-    lineShaderProgram->setUniformValue("lineColor", QColor(255, 255, 0, 255)); // Cor do grid (amarelo)
+
+    // Lógica para posicionar a grade dinamicamente com a câmera.
+    QVector3D cameraPos = viewMatrix.inverted() * QVector3D(0,0,0);
+    float gridSquareSize = m_config->gridSquareSize;
+
+    float gridOffsetX = qFloor(cameraPos.x() / gridSquareSize) * gridSquareSize;
+    float gridOffsetZ = qFloor(cameraPos.z() / gridSquareSize) * gridSquareSize;
+
+    QMatrix4x4 modelMatrix;
+    modelMatrix.setToIdentity();
+    modelMatrix.translate(gridOffsetX, 0.0f, gridOffsetZ);
+
+    lineShaderProgram->setUniformValue("modelMatrix", modelMatrix);
+    lineShaderProgram->setUniformValue("lineColor", QColor(255, 255, 0, 255));
 
     m_vao.bind();
-    // Desenha as linhas. Como definiremos as linhas como GL_LINES, cada 2 vértices formam uma linha.
-    // Ou, se usarmos quads para as linhas, será GL_TRIANGLES.
-    // Por enquanto, usamos GL_LINES_STRIP ou GL_LINES para simplicidade, depois ajustamos se for quad.
-    m_glFuncsRef->glDrawArrays(GL_LINES, 0, m_vertexCount); // Assumindo GL_LINES por enquanto
+    // A primitiva de desenho GL_TRIANGLES é a correta para a geometria gerada.
+    m_glFuncsRef->glDrawArrays(GL_TRIANGLES, 0, m_vertexCount);
     m_vao.release();
 }

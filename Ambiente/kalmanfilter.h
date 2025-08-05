@@ -70,18 +70,6 @@ signals:
 
 
 private:
-    //Vetor de estado (x): [Px, Pz, Vx, Vz]
-    Eigen::VectorXd x;
-
-    //Matriz de Covariancia de erro de estimativa (P)
-    Eigen::MatrixXd P;
-
-    //MAtriz de covariancia do ruido do process (Q)
-    Eigen::MatrixXd Q;
-
-    //Matriz de covariancia do ruido de medição (R)
-    Eigen::MatrixXd R;
-
     //Parametros do UKF
     int n_x;        // Dimensão do vetor de estado (4: Px, Pz, Vx, Vz)
     int n_z;        // Dimensão do vetor de medição (2: Px, Pz)
@@ -114,16 +102,11 @@ private:
     int m_m; // Dimensão da medição (e.g., 2 para x, z)
 
     // Matrizes e vetores do UKF
-    // OBSERVAÇÃO: As variáveis m_Q e m_R já estão declaradas aqui.
-    // Não é necessário adicioná-las.
     Eigen::VectorXd m_state;     // Vetor de estado [x, z, vx, vz]'
     Eigen::MatrixXd m_P;         // Matriz de covariância do erro do estado
     Eigen::MatrixXd m_Q;         // Matriz de covariância do ruído do processo
     Eigen::MatrixXd m_R;         // Matriz de covariância do ruído da medição
 
-    // Pesos para os sigma points
-    Eigen::VectorXd m_Wm; // Pesos para a média
-    Eigen::VectorXd m_Wc; // Pesos para a covariância
 };
 
 #endif // KALMANFILTER_H
