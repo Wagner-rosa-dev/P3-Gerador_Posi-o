@@ -43,6 +43,9 @@ private:
     std::unique_ptr<QTextStream> m_textStream;
     QTimer m_playbackTimer;
 
+    GpsData m_buildingGpsData;
+    bool m_isEpochReady;
+
 
 
 

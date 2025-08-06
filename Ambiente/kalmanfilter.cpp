@@ -161,10 +161,10 @@ void KalmanFilter::predict(double dt) {
 //FAse de atualização
 //Descrição: Incorpora uma nova medição (posição X, Z do GPS) para refinar
 //           e estimativa do estado e sua covariancia.
-void KalmanFilter::update(double measuredX, double measuredZ) {
+UpdateResult KalmanFilter::update(double measuredX, double measuredZ) {
     if (!m_isInitialized) {
         MY_LOG_WARNING("Kalman", "KalmanFilter não inicializado. Chame reset() primeiro.");
-        return;
+        return{Eigen::VectorXd(), Eigen::MatrixXd()};
     }
 
     //Vetor de medição real (z_measured)
@@ -219,7 +219,7 @@ void KalmanFilter::update(double measuredX, double measuredZ) {
         K = lltOfP_zz.solve(P_xz.transpose()).transpose(); // K = (P_zz^-1 * P_xz.transpose()).transpose() = P_xz * P_zz^-1
     } else {
         MY_LOG_ERROR("Kalman", "Falha na decomposição de Cholesky para P_zz. P_zz pode não ser SPD. Atualização ignorada.");
-        return; // Não atualiza o estado se a inversão falhar
+        return{Eigen::VectorXd(), Eigen::MatrixXd()}; // Não atualiza o estado se a inversão falhar
     }
 
     MY_LOG_DEBUG("Kalman_Update", QString("IN K(0,0)=%1 K(0,1)=%2 K(1,0)=%3 K(1,1)=%4")
@@ -244,6 +244,8 @@ void KalmanFilter::update(double measuredX, double measuredZ) {
                                       .arg(m_state(2), 0, 'f', 3).arg(m_state(3), 0, 'f', 3));
     MY_LOG_DEBUG("Kalman_Update", QString("OUT P_est(0,0):%1 P_est(1,1):%2")
                                       .arg(m_P(0,0), 0, 'f', 3).arg(m_P(1,1), 0, 'f', 3));
+
+    return {y, P_zz};
 }
 //Retorna a posição (X, Z) estimada
 QVector2D KalmanFilter::getStatePosition() const {
@@ -333,5 +335,17 @@ Eigen::MatrixXd KalmanFilter::generateSigmaPoints(const Eigen::VectorXd& x_mean,
     }
 
     return sigma_points;
+}
+
+void KalmanFilter::setState(const Eigen::VectorXd& state, const Eigen::MatrixXd& covariance) {
+  if (state.size() == m_state.size() &&
+        covariance.rows() == m_P.rows() &&
+        covariance.cols() == m_P.cols()) {
+
+        m_state = state;
+        m_P = covariance;
+    } else {
+        MY_LOG_ERROR("KalmanFilter", "Tentativa de definir estado/covariância com dimensões incorretas.");
+    }
 }
 

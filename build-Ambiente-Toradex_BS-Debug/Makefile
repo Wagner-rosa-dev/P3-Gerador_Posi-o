@@ -14,7 +14,7 @@ EQ            = =
 
 CC            = aarch64-tdx-linux-gcc  -mcpu=cortex-a53 -march=armv8-a+crc -mbranch-protection=standard -fstack-protector-strong  -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security --sysroot=/home/wagner/sdk/6.9.0/sysroots/cortexa53-tdx-linux
 CXX           = aarch64-tdx-linux-g++  -mcpu=cortex-a53 -march=armv8-a+crc -mbranch-protection=standard -fstack-protector-strong  -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security --sysroot=/home/wagner/sdk/6.9.0/sysroots/cortexa53-tdx-linux
-DEFINES       = -DQT_QML_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_SERIALPORT_LIB -DQT_POSITIONING_LIB -DQT_CORE_LIB
+DEFINES       = -DUSE_LIVE_GPS -DQT_QML_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_SERIALPORT_LIB -DQT_POSITIONING_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe  -O2 -pipe -g -feliminate-unused-debug-types  --sysroot=/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux -g -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe  -O2 -pipe -g -feliminate-unused-debug-types  --sysroot=/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux -g -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
 INCPATH       = -I../Ambiente -I. -I../Ambiente/libs/Eigen -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtOpenGL -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtSerialPort -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore -I. -I. -I../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/linux-oe-g++
@@ -56,7 +56,9 @@ SOURCES       = ../Ambiente/camera.cpp \
 		../Ambiente/chunk.cpp \
 		../Ambiente/chunkworker.cpp \
 		../Ambiente/gpsfileplayer.cpp \
+		../Ambiente/immfilter.cpp \
 		../Ambiente/kalmanfilter.cpp \
+		../Ambiente/linearkalmanfilter.cpp \
 		../Ambiente/logger.cpp \
 		../Ambiente/main.cpp \
 		../Ambiente/mainwindow.cpp \
@@ -73,7 +75,9 @@ OBJECTS       = camera.o \
 		chunk.o \
 		chunkworker.o \
 		gpsfileplayer.o \
+		immfilter.o \
 		kalmanfilter.o \
+		linearkalmanfilter.o \
 		logger.o \
 		main.o \
 		mainwindow.o \
@@ -275,7 +279,9 @@ DIST          = ../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/fea
 		../Ambiente/chunkworker.h \
 		../Ambiente/filterprofiles.h \
 		../Ambiente/gpsfileplayer.h \
+		../Ambiente/immfilter.h \
 		../Ambiente/kalmanfilter.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/logger.h \
 		../Ambiente/mainwindow.h \
 		../Ambiente/myglwidget.h \
@@ -287,7 +293,9 @@ DIST          = ../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/fea
 		../Ambiente/chunk.cpp \
 		../Ambiente/chunkworker.cpp \
 		../Ambiente/gpsfileplayer.cpp \
+		../Ambiente/immfilter.cpp \
 		../Ambiente/kalmanfilter.cpp \
+		../Ambiente/linearkalmanfilter.cpp \
 		../Ambiente/logger.cpp \
 		../Ambiente/main.cpp \
 		../Ambiente/mainwindow.cpp \
@@ -691,8 +699,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents ../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../Ambiente/camera.h ../Ambiente/chunk.h ../Ambiente/chunkworker.h ../Ambiente/filterprofiles.h ../Ambiente/gpsfileplayer.h ../Ambiente/kalmanfilter.h ../Ambiente/logger.h ../Ambiente/mainwindow.h ../Ambiente/myglwidget.h ../Ambiente/noiseutils.h ../Ambiente/speedcontroller.h ../Ambiente/terraingrid.h ../Ambiente/terrainmanager.h ../Ambiente/worldconfig.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../Ambiente/camera.cpp ../Ambiente/chunk.cpp ../Ambiente/chunkworker.cpp ../Ambiente/gpsfileplayer.cpp ../Ambiente/kalmanfilter.cpp ../Ambiente/logger.cpp ../Ambiente/main.cpp ../Ambiente/mainwindow.cpp ../Ambiente/myglwidget.cpp ../Ambiente/noiseutils.cpp ../Ambiente/speedcontroller.cpp ../Ambiente/terraingrid.cpp ../Ambiente/terrainmanager.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../Ambiente/camera.h ../Ambiente/chunk.h ../Ambiente/chunkworker.h ../Ambiente/filterprofiles.h ../Ambiente/gpsfileplayer.h ../Ambiente/immfilter.h ../Ambiente/kalmanfilter.h ../Ambiente/linearkalmanfilter.h ../Ambiente/logger.h ../Ambiente/mainwindow.h ../Ambiente/myglwidget.h ../Ambiente/noiseutils.h ../Ambiente/speedcontroller.h ../Ambiente/terraingrid.h ../Ambiente/terrainmanager.h ../Ambiente/worldconfig.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../Ambiente/camera.cpp ../Ambiente/chunk.cpp ../Ambiente/chunkworker.cpp ../Ambiente/gpsfileplayer.cpp ../Ambiente/immfilter.cpp ../Ambiente/kalmanfilter.cpp ../Ambiente/linearkalmanfilter.cpp ../Ambiente/logger.cpp ../Ambiente/main.cpp ../Ambiente/mainwindow.cpp ../Ambiente/myglwidget.cpp ../Ambiente/noiseutils.cpp ../Ambiente/speedcontroller.cpp ../Ambiente/terraingrid.cpp ../Ambiente/terrainmanager.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../Ambiente/myglwidget.ui $(DISTDIR)/
 
 
@@ -740,6 +748,10 @@ moc_gpsfileplayer.cpp: ../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
 		../Ambiente/speedcontroller.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		moc_predefs.h \
 		../../../sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/bin/moc
 	/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/bin/moc $(DEFINES) --include /home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/build-Ambiente-Toradex_BS-Debug/moc_predefs.h -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/linux-oe-g++ -I/home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/Ambiente -I/home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/Ambiente/libs/Eigen -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtOpenGL -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtSerialPort -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore -I. -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0 -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0/aarch64-tdx-linux -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0/backward -I/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/lib/aarch64-tdx-linux/gcc/aarch64-tdx-linux/13.4.0/include -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/aarch64-tdx-linux/13.4.0/include -I/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/lib/aarch64-tdx-linux/gcc/aarch64-tdx-linux/13.4.0/include-fixed -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include ../Ambiente/gpsfileplayer.h -o moc_gpsfileplayer.cpp
@@ -1074,6 +1086,7 @@ moc_mainwindow.cpp: ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QObject \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
@@ -1084,6 +1097,8 @@ moc_mainwindow.cpp: ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTimer \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qtimer.h \
 		../Ambiente/speedcontroller.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/QComboBox \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/qcombobox.h \
 		moc_predefs.h \
@@ -1123,16 +1138,15 @@ moc_myglwidget.cpp: ../Ambiente/myglwidget.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../Ambiente/worldconfig.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/QGeoCoordinate \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/qgeocoordinate.h \
-		../Ambiente/kalmanfilter.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector4D \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector4d.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h \
+		../Ambiente/immfilter.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/libs/Eigen/Eigen \
 		../Ambiente/libs/Eigen/Dense \
 		../Ambiente/libs/Eigen/Core \
@@ -1442,13 +1456,20 @@ moc_myglwidget.cpp: ../Ambiente/myglwidget.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
+		../Ambiente/kalmanfilter.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector4D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector4d.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
 		../Ambiente/filterprofiles.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QVector \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qvector.h \
 		../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QFile \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qfile.h \
@@ -1464,6 +1485,10 @@ moc_speedcontroller.cpp: ../Ambiente/speedcontroller.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		moc_predefs.h \
 		../../../sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/bin/moc
 	/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/bin/moc $(DEFINES) --include /home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/build-Ambiente-Toradex_BS-Debug/moc_predefs.h -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/mkspecs/linux-oe-g++ -I/home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/Ambiente -I/home/wagner/ExemplosQt/Gps-com-gerador-de-Posição/Ambiente/libs/Eigen -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtOpenGL -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtSerialPort -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore -I. -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0 -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0/aarch64-tdx-linux -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/c++/13.4.0/backward -I/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/lib/aarch64-tdx-linux/gcc/aarch64-tdx-linux/13.4.0/include -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/lib/aarch64-tdx-linux/13.4.0/include -I/home/wagner/sdk/7.3.0/sysroots/x86_64-tdxsdk-linux/usr/lib/aarch64-tdx-linux/gcc/aarch64-tdx-linux/13.4.0/include-fixed -I/home/wagner/sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include ../Ambiente/speedcontroller.h -o moc_speedcontroller.cpp
@@ -1595,6 +1620,10 @@ gpsfileplayer.o: ../Ambiente/gpsfileplayer.cpp ../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
 		../Ambiente/speedcontroller.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../Ambiente/logger.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
@@ -1605,6 +1634,348 @@ gpsfileplayer.o: ../Ambiente/gpsfileplayer.cpp ../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QStringList \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstringlist.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o gpsfileplayer.o ../Ambiente/gpsfileplayer.cpp
+
+immfilter.o: ../Ambiente/immfilter.cpp ../Ambiente/immfilter.h \
+		../Ambiente/linearkalmanfilter.h \
+		../Ambiente/libs/Eigen/Eigen \
+		../Ambiente/libs/Eigen/Dense \
+		../Ambiente/libs/Eigen/Core \
+		../Ambiente/libs/Eigen/src/Core/util/DisableStupidWarnings.h \
+		../Ambiente/libs/Eigen/src/Core/util/Macros.h \
+		../Ambiente/libs/Eigen/src/Core/util/ConfigureVectorization.h \
+		../Ambiente/libs/Eigen/src/Core/util/MKL_support.h \
+		../Ambiente/libs/Eigen/src/misc/blas.h \
+		../Ambiente/libs/Eigen/src/Core/util/Constants.h \
+		../Ambiente/libs/Eigen/src/Core/util/Meta.h \
+		../Ambiente/libs/Eigen/src/Core/util/ForwardDeclarations.h \
+		../Ambiente/libs/Eigen/src/Core/util/StaticAssert.h \
+		../Ambiente/libs/Eigen/src/Core/util/XprHelper.h \
+		../Ambiente/libs/Eigen/src/Core/util/Memory.h \
+		../Ambiente/libs/Eigen/src/Core/util/IntegralConstant.h \
+		../Ambiente/libs/Eigen/src/Core/util/SymbolicIndex.h \
+		../Ambiente/libs/Eigen/src/Core/NumTraits.h \
+		../Ambiente/libs/Eigen/src/Core/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/GenericPacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/MathFunctionsImpl.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/ConjHelper.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/Half.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/BFloat16.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/SyclMemoryModel.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/InteropHeaders.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/Settings.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/GenericPacketMathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/functors/TernaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/BinaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/UnaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/NullaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/StlFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/AssignmentFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/arch/CUDA/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/util/IndexedViewHelper.h \
+		../Ambiente/libs/Eigen/src/Core/util/ReshapedHelper.h \
+		../Ambiente/libs/Eigen/src/Core/ArithmeticSequence.h \
+		../Ambiente/libs/Eigen/src/Core/IO.h \
+		../Ambiente/libs/Eigen/src/Core/DenseCoeffsBase.h \
+		../Ambiente/libs/Eigen/src/Core/DenseBase.h \
+		../Ambiente/libs/Eigen/src/plugins/CommonCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/BlockMethods.h \
+		../Ambiente/libs/Eigen/src/plugins/IndexedViewMethods.h \
+		../Ambiente/libs/Eigen/src/plugins/ReshapedMethods.h \
+		../Ambiente/libs/Eigen/src/Core/MatrixBase.h \
+		../Ambiente/libs/Eigen/src/plugins/CommonCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/MatrixCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/MatrixCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/Core/EigenBase.h \
+		../Ambiente/libs/Eigen/src/Core/Product.h \
+		../Ambiente/libs/Eigen/src/Core/CoreEvaluators.h \
+		../Ambiente/libs/Eigen/src/Core/AssignEvaluator.h \
+		../Ambiente/libs/Eigen/src/Core/Assign.h \
+		../Ambiente/libs/Eigen/src/Core/ArrayBase.h \
+		../Ambiente/libs/Eigen/src/plugins/ArrayCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/ArrayCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/Core/util/BlasUtil.h \
+		../Ambiente/libs/Eigen/src/Core/DenseStorage.h \
+		../Ambiente/libs/Eigen/src/Core/NestByValue.h \
+		../Ambiente/libs/Eigen/src/Core/ReturnByValue.h \
+		../Ambiente/libs/Eigen/src/Core/NoAlias.h \
+		../Ambiente/libs/Eigen/src/Core/PlainObjectBase.h \
+		../Ambiente/libs/Eigen/src/Core/Matrix.h \
+		../Ambiente/libs/Eigen/src/Core/Array.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseTernaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseUnaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseNullaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseUnaryView.h \
+		../Ambiente/libs/Eigen/src/Core/SelfCwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/Dot.h \
+		../Ambiente/libs/Eigen/src/Core/StableNorm.h \
+		../Ambiente/libs/Eigen/src/Core/Stride.h \
+		../Ambiente/libs/Eigen/src/Core/MapBase.h \
+		../Ambiente/libs/Eigen/src/Core/Map.h \
+		../Ambiente/libs/Eigen/src/Core/Ref.h \
+		../Ambiente/libs/Eigen/src/Core/Block.h \
+		../Ambiente/libs/Eigen/src/Core/VectorBlock.h \
+		../Ambiente/libs/Eigen/src/Core/IndexedView.h \
+		../Ambiente/libs/Eigen/src/Core/Reshaped.h \
+		../Ambiente/libs/Eigen/src/Core/Transpose.h \
+		../Ambiente/libs/Eigen/src/Core/DiagonalMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/Diagonal.h \
+		../Ambiente/libs/Eigen/src/Core/DiagonalProduct.h \
+		../Ambiente/libs/Eigen/src/Core/Redux.h \
+		../Ambiente/libs/Eigen/src/Core/Visitor.h \
+		../Ambiente/libs/Eigen/src/Core/Fuzzy.h \
+		../Ambiente/libs/Eigen/src/Core/Swap.h \
+		../Ambiente/libs/Eigen/src/Core/CommaInitializer.h \
+		../Ambiente/libs/Eigen/src/Core/GeneralProduct.h \
+		../Ambiente/libs/Eigen/src/Core/Solve.h \
+		../Ambiente/libs/Eigen/src/Core/Inverse.h \
+		../Ambiente/libs/Eigen/src/Core/SolverBase.h \
+		../Ambiente/libs/Eigen/src/Core/PermutationMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/Transpositions.h \
+		../Ambiente/libs/Eigen/src/Core/TriangularMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/SelfAdjointView.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
+		../Ambiente/libs/Eigen/src/Core/products/Parallelizer.h \
+		../Ambiente/libs/Eigen/src/Core/ProductEvaluators.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/SolveTriangular.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointProduct.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointRank2Update.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverVector.h \
+		../Ambiente/libs/Eigen/src/Core/BandMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/CoreIterators.h \
+		../Ambiente/libs/Eigen/src/Core/ConditionEstimator.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProduct.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProductCommon.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProductMMA.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/GeneralBlockPanelKernel.h \
+		../Ambiente/libs/Eigen/src/Core/BooleanRedux.h \
+		../Ambiente/libs/Eigen/src/Core/Select.h \
+		../Ambiente/libs/Eigen/src/Core/VectorwiseOp.h \
+		../Ambiente/libs/Eigen/src/Core/PartialReduxEvaluator.h \
+		../Ambiente/libs/Eigen/src/Core/Random.h \
+		../Ambiente/libs/Eigen/src/Core/Replicate.h \
+		../Ambiente/libs/Eigen/src/Core/Reverse.h \
+		../Ambiente/libs/Eigen/src/Core/ArrayWrapper.h \
+		../Ambiente/libs/Eigen/src/Core/StlIterators.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/Assign_MKL.h \
+		../Ambiente/libs/Eigen/src/Core/GlobalFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/util/ReenableStupidWarnings.h \
+		../Ambiente/libs/Eigen/LU \
+		../Ambiente/libs/Eigen/src/misc/Kernel.h \
+		../Ambiente/libs/Eigen/src/misc/Image.h \
+		../Ambiente/libs/Eigen/src/LU/FullPivLU.h \
+		../Ambiente/libs/Eigen/src/LU/PartialPivLU.h \
+		../Ambiente/libs/Eigen/src/misc/lapacke.h \
+		../Ambiente/libs/Eigen/src/misc/lapacke_mangling.h \
+		../Ambiente/libs/Eigen/src/LU/PartialPivLU_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/LU/Determinant.h \
+		../Ambiente/libs/Eigen/src/LU/InverseImpl.h \
+		../Ambiente/libs/Eigen/src/LU/arch/InverseSize4.h \
+		../Ambiente/libs/Eigen/Cholesky \
+		../Ambiente/libs/Eigen/Jacobi \
+		../Ambiente/libs/Eigen/src/Jacobi/Jacobi.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LLT.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LDLT.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LLT_LAPACKE.h \
+		../Ambiente/libs/Eigen/QR \
+		../Ambiente/libs/Eigen/Householder \
+		../Ambiente/libs/Eigen/src/Householder/Householder.h \
+		../Ambiente/libs/Eigen/src/Householder/HouseholderSequence.h \
+		../Ambiente/libs/Eigen/src/Householder/BlockHouseholder.h \
+		../Ambiente/libs/Eigen/src/QR/HouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/FullPivHouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/ColPivHouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
+		../Ambiente/libs/Eigen/src/QR/HouseholderQR_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/QR/ColPivHouseholderQR_LAPACKE.h \
+		../Ambiente/libs/Eigen/SVD \
+		../Ambiente/libs/Eigen/src/misc/RealSvd2x2.h \
+		../Ambiente/libs/Eigen/src/SVD/UpperBidiagonalization.h \
+		../Ambiente/libs/Eigen/src/SVD/SVDBase.h \
+		../Ambiente/libs/Eigen/src/SVD/JacobiSVD.h \
+		../Ambiente/libs/Eigen/src/SVD/BDCSVD.h \
+		../Ambiente/libs/Eigen/src/SVD/JacobiSVD_LAPACKE.h \
+		../Ambiente/libs/Eigen/Geometry \
+		../Ambiente/libs/Eigen/src/Geometry/OrthoMethods.h \
+		../Ambiente/libs/Eigen/src/Geometry/EulerAngles.h \
+		../Ambiente/libs/Eigen/src/Geometry/Homogeneous.h \
+		../Ambiente/libs/Eigen/src/Geometry/RotationBase.h \
+		../Ambiente/libs/Eigen/src/Geometry/Rotation2D.h \
+		../Ambiente/libs/Eigen/src/Geometry/Quaternion.h \
+		../Ambiente/libs/Eigen/src/Geometry/AngleAxis.h \
+		../Ambiente/libs/Eigen/src/Geometry/Transform.h \
+		../Ambiente/libs/Eigen/src/Geometry/Translation.h \
+		../Ambiente/libs/Eigen/src/Geometry/Scaling.h \
+		../Ambiente/libs/Eigen/src/Geometry/Hyperplane.h \
+		../Ambiente/libs/Eigen/src/Geometry/ParametrizedLine.h \
+		../Ambiente/libs/Eigen/src/Geometry/AlignedBox.h \
+		../Ambiente/libs/Eigen/src/Geometry/Umeyama.h \
+		../Ambiente/libs/Eigen/src/Geometry/arch/Geometry_SIMD.h \
+		../Ambiente/libs/Eigen/Eigenvalues \
+		../Ambiente/libs/Eigen/src/Eigenvalues/Tridiagonalization.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealSchur.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/EigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexSchur.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealQZ.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealSchur_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexSchur_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_LAPACKE.h \
+		../Ambiente/libs/Eigen/Sparse \
+		../Ambiente/libs/Eigen/SparseCore \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseUtil.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMatrixBase.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseAssign.h \
+		../Ambiente/libs/Eigen/src/SparseCore/CompressedStorage.h \
+		../Ambiente/libs/Eigen/src/SparseCore/AmbiVector.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCompressedBase.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMap.h \
+		../Ambiente/libs/Eigen/src/SparseCore/MappedSparseMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseVector.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseRef.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCwiseUnaryOp.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseTranspose.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseBlock.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDot.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseRedux.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDiagonalProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSparseProductWithPruning.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDenseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSelfAdjointView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseTriangularView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/TriangularSolver.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparsePermutation.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseFuzzy.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSolverBase.h \
+		../Ambiente/libs/Eigen/OrderingMethods \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Amd.h \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Ordering.h \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Eigen_Colamd.h \
+		../Ambiente/libs/Eigen/SparseCholesky \
+		../Ambiente/libs/Eigen/src/SparseCholesky/SimplicialCholesky.h \
+		../Ambiente/libs/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h \
+		../Ambiente/libs/Eigen/SparseLU \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_gemm_kernel.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Structs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLUImpl.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseColEtree.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Memory.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_relax_snode.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_pivotL.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_panel_dfs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_kernel_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_panel_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_column_dfs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_column_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_pruneL.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Utils.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU.h \
+		../Ambiente/libs/Eigen/SparseQR \
+		../Ambiente/libs/Eigen/src/SparseQR/SparseQR.h \
+		../Ambiente/libs/Eigen/IterativeLinearSolvers \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/SolveWithGuess.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/LeastSquareConjugateGradient.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
+		../Ambiente/kalmanfilter.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QMatrix4x4 \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qmatrix4x4.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector4D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector4d.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
+		../Ambiente/filterprofiles.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QVector \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qvector.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QElapsedTimer \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qelapsedtimer.h \
+		../Ambiente/logger.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QFile \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qfile.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTextStream \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qtextstream.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMutex \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmutex.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o immfilter.o ../Ambiente/immfilter.cpp
 
 kalmanfilter.o: ../Ambiente/kalmanfilter.cpp ../Ambiente/kalmanfilter.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QMatrix4x4 \
@@ -1933,6 +2304,7 @@ kalmanfilter.o: ../Ambiente/kalmanfilter.cpp ../Ambiente/kalmanfilter.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/logger.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QFile \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qfile.h \
@@ -1941,6 +2313,335 @@ kalmanfilter.o: ../Ambiente/kalmanfilter.cpp ../Ambiente/kalmanfilter.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMutex \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmutex.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o kalmanfilter.o ../Ambiente/kalmanfilter.cpp
+
+linearkalmanfilter.o: ../Ambiente/linearkalmanfilter.cpp ../Ambiente/linearkalmanfilter.h \
+		../Ambiente/libs/Eigen/Eigen \
+		../Ambiente/libs/Eigen/Dense \
+		../Ambiente/libs/Eigen/Core \
+		../Ambiente/libs/Eigen/src/Core/util/DisableStupidWarnings.h \
+		../Ambiente/libs/Eigen/src/Core/util/Macros.h \
+		../Ambiente/libs/Eigen/src/Core/util/ConfigureVectorization.h \
+		../Ambiente/libs/Eigen/src/Core/util/MKL_support.h \
+		../Ambiente/libs/Eigen/src/misc/blas.h \
+		../Ambiente/libs/Eigen/src/Core/util/Constants.h \
+		../Ambiente/libs/Eigen/src/Core/util/Meta.h \
+		../Ambiente/libs/Eigen/src/Core/util/ForwardDeclarations.h \
+		../Ambiente/libs/Eigen/src/Core/util/StaticAssert.h \
+		../Ambiente/libs/Eigen/src/Core/util/XprHelper.h \
+		../Ambiente/libs/Eigen/src/Core/util/Memory.h \
+		../Ambiente/libs/Eigen/src/Core/util/IntegralConstant.h \
+		../Ambiente/libs/Eigen/src/Core/util/SymbolicIndex.h \
+		../Ambiente/libs/Eigen/src/Core/NumTraits.h \
+		../Ambiente/libs/Eigen/src/Core/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/GenericPacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/MathFunctionsImpl.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/ConjHelper.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/Half.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/BFloat16.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SSE/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AVX512/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SVE/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/ZVector/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/MSA/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/GPU/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/SyclMemoryModel.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/InteropHeaders.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/PacketMath.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/MathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/arch/SYCL/TypeCasting.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/Settings.h \
+		../Ambiente/libs/Eigen/src/Core/arch/Default/GenericPacketMathFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/functors/TernaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/BinaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/UnaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/NullaryFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/StlFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/functors/AssignmentFunctors.h \
+		../Ambiente/libs/Eigen/src/Core/arch/CUDA/Complex.h \
+		../Ambiente/libs/Eigen/src/Core/util/IndexedViewHelper.h \
+		../Ambiente/libs/Eigen/src/Core/util/ReshapedHelper.h \
+		../Ambiente/libs/Eigen/src/Core/ArithmeticSequence.h \
+		../Ambiente/libs/Eigen/src/Core/IO.h \
+		../Ambiente/libs/Eigen/src/Core/DenseCoeffsBase.h \
+		../Ambiente/libs/Eigen/src/Core/DenseBase.h \
+		../Ambiente/libs/Eigen/src/plugins/CommonCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/BlockMethods.h \
+		../Ambiente/libs/Eigen/src/plugins/IndexedViewMethods.h \
+		../Ambiente/libs/Eigen/src/plugins/ReshapedMethods.h \
+		../Ambiente/libs/Eigen/src/Core/MatrixBase.h \
+		../Ambiente/libs/Eigen/src/plugins/CommonCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/MatrixCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/MatrixCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/Core/EigenBase.h \
+		../Ambiente/libs/Eigen/src/Core/Product.h \
+		../Ambiente/libs/Eigen/src/Core/CoreEvaluators.h \
+		../Ambiente/libs/Eigen/src/Core/AssignEvaluator.h \
+		../Ambiente/libs/Eigen/src/Core/Assign.h \
+		../Ambiente/libs/Eigen/src/Core/ArrayBase.h \
+		../Ambiente/libs/Eigen/src/plugins/ArrayCwiseUnaryOps.h \
+		../Ambiente/libs/Eigen/src/plugins/ArrayCwiseBinaryOps.h \
+		../Ambiente/libs/Eigen/src/Core/util/BlasUtil.h \
+		../Ambiente/libs/Eigen/src/Core/DenseStorage.h \
+		../Ambiente/libs/Eigen/src/Core/NestByValue.h \
+		../Ambiente/libs/Eigen/src/Core/ReturnByValue.h \
+		../Ambiente/libs/Eigen/src/Core/NoAlias.h \
+		../Ambiente/libs/Eigen/src/Core/PlainObjectBase.h \
+		../Ambiente/libs/Eigen/src/Core/Matrix.h \
+		../Ambiente/libs/Eigen/src/Core/Array.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseTernaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseUnaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseNullaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/CwiseUnaryView.h \
+		../Ambiente/libs/Eigen/src/Core/SelfCwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/Core/Dot.h \
+		../Ambiente/libs/Eigen/src/Core/StableNorm.h \
+		../Ambiente/libs/Eigen/src/Core/Stride.h \
+		../Ambiente/libs/Eigen/src/Core/MapBase.h \
+		../Ambiente/libs/Eigen/src/Core/Map.h \
+		../Ambiente/libs/Eigen/src/Core/Ref.h \
+		../Ambiente/libs/Eigen/src/Core/Block.h \
+		../Ambiente/libs/Eigen/src/Core/VectorBlock.h \
+		../Ambiente/libs/Eigen/src/Core/IndexedView.h \
+		../Ambiente/libs/Eigen/src/Core/Reshaped.h \
+		../Ambiente/libs/Eigen/src/Core/Transpose.h \
+		../Ambiente/libs/Eigen/src/Core/DiagonalMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/Diagonal.h \
+		../Ambiente/libs/Eigen/src/Core/DiagonalProduct.h \
+		../Ambiente/libs/Eigen/src/Core/Redux.h \
+		../Ambiente/libs/Eigen/src/Core/Visitor.h \
+		../Ambiente/libs/Eigen/src/Core/Fuzzy.h \
+		../Ambiente/libs/Eigen/src/Core/Swap.h \
+		../Ambiente/libs/Eigen/src/Core/CommaInitializer.h \
+		../Ambiente/libs/Eigen/src/Core/GeneralProduct.h \
+		../Ambiente/libs/Eigen/src/Core/Solve.h \
+		../Ambiente/libs/Eigen/src/Core/Inverse.h \
+		../Ambiente/libs/Eigen/src/Core/SolverBase.h \
+		../Ambiente/libs/Eigen/src/Core/PermutationMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/Transpositions.h \
+		../Ambiente/libs/Eigen/src/Core/TriangularMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/SelfAdjointView.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
+		../Ambiente/libs/Eigen/src/Core/products/Parallelizer.h \
+		../Ambiente/libs/Eigen/src/Core/ProductEvaluators.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/SolveTriangular.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointProduct.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointRank2Update.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixVector.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverVector.h \
+		../Ambiente/libs/Eigen/src/Core/BandMatrix.h \
+		../Ambiente/libs/Eigen/src/Core/CoreIterators.h \
+		../Ambiente/libs/Eigen/src/Core/ConditionEstimator.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProduct.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProductCommon.h \
+		../Ambiente/libs/Eigen/src/Core/arch/AltiVec/MatrixProductMMA.h \
+		../Ambiente/libs/Eigen/src/Core/arch/NEON/GeneralBlockPanelKernel.h \
+		../Ambiente/libs/Eigen/src/Core/BooleanRedux.h \
+		../Ambiente/libs/Eigen/src/Core/Select.h \
+		../Ambiente/libs/Eigen/src/Core/VectorwiseOp.h \
+		../Ambiente/libs/Eigen/src/Core/PartialReduxEvaluator.h \
+		../Ambiente/libs/Eigen/src/Core/Random.h \
+		../Ambiente/libs/Eigen/src/Core/Replicate.h \
+		../Ambiente/libs/Eigen/src/Core/Reverse.h \
+		../Ambiente/libs/Eigen/src/Core/ArrayWrapper.h \
+		../Ambiente/libs/Eigen/src/Core/StlIterators.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/SelfadjointMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularMatrixVector_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/products/TriangularSolverMatrix_BLAS.h \
+		../Ambiente/libs/Eigen/src/Core/Assign_MKL.h \
+		../Ambiente/libs/Eigen/src/Core/GlobalFunctions.h \
+		../Ambiente/libs/Eigen/src/Core/util/ReenableStupidWarnings.h \
+		../Ambiente/libs/Eigen/LU \
+		../Ambiente/libs/Eigen/src/misc/Kernel.h \
+		../Ambiente/libs/Eigen/src/misc/Image.h \
+		../Ambiente/libs/Eigen/src/LU/FullPivLU.h \
+		../Ambiente/libs/Eigen/src/LU/PartialPivLU.h \
+		../Ambiente/libs/Eigen/src/misc/lapacke.h \
+		../Ambiente/libs/Eigen/src/misc/lapacke_mangling.h \
+		../Ambiente/libs/Eigen/src/LU/PartialPivLU_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/LU/Determinant.h \
+		../Ambiente/libs/Eigen/src/LU/InverseImpl.h \
+		../Ambiente/libs/Eigen/src/LU/arch/InverseSize4.h \
+		../Ambiente/libs/Eigen/Cholesky \
+		../Ambiente/libs/Eigen/Jacobi \
+		../Ambiente/libs/Eigen/src/Jacobi/Jacobi.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LLT.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LDLT.h \
+		../Ambiente/libs/Eigen/src/Cholesky/LLT_LAPACKE.h \
+		../Ambiente/libs/Eigen/QR \
+		../Ambiente/libs/Eigen/Householder \
+		../Ambiente/libs/Eigen/src/Householder/Householder.h \
+		../Ambiente/libs/Eigen/src/Householder/HouseholderSequence.h \
+		../Ambiente/libs/Eigen/src/Householder/BlockHouseholder.h \
+		../Ambiente/libs/Eigen/src/QR/HouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/FullPivHouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/ColPivHouseholderQR.h \
+		../Ambiente/libs/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
+		../Ambiente/libs/Eigen/src/QR/HouseholderQR_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/QR/ColPivHouseholderQR_LAPACKE.h \
+		../Ambiente/libs/Eigen/SVD \
+		../Ambiente/libs/Eigen/src/misc/RealSvd2x2.h \
+		../Ambiente/libs/Eigen/src/SVD/UpperBidiagonalization.h \
+		../Ambiente/libs/Eigen/src/SVD/SVDBase.h \
+		../Ambiente/libs/Eigen/src/SVD/JacobiSVD.h \
+		../Ambiente/libs/Eigen/src/SVD/BDCSVD.h \
+		../Ambiente/libs/Eigen/src/SVD/JacobiSVD_LAPACKE.h \
+		../Ambiente/libs/Eigen/Geometry \
+		../Ambiente/libs/Eigen/src/Geometry/OrthoMethods.h \
+		../Ambiente/libs/Eigen/src/Geometry/EulerAngles.h \
+		../Ambiente/libs/Eigen/src/Geometry/Homogeneous.h \
+		../Ambiente/libs/Eigen/src/Geometry/RotationBase.h \
+		../Ambiente/libs/Eigen/src/Geometry/Rotation2D.h \
+		../Ambiente/libs/Eigen/src/Geometry/Quaternion.h \
+		../Ambiente/libs/Eigen/src/Geometry/AngleAxis.h \
+		../Ambiente/libs/Eigen/src/Geometry/Transform.h \
+		../Ambiente/libs/Eigen/src/Geometry/Translation.h \
+		../Ambiente/libs/Eigen/src/Geometry/Scaling.h \
+		../Ambiente/libs/Eigen/src/Geometry/Hyperplane.h \
+		../Ambiente/libs/Eigen/src/Geometry/ParametrizedLine.h \
+		../Ambiente/libs/Eigen/src/Geometry/AlignedBox.h \
+		../Ambiente/libs/Eigen/src/Geometry/Umeyama.h \
+		../Ambiente/libs/Eigen/src/Geometry/arch/Geometry_SIMD.h \
+		../Ambiente/libs/Eigen/Eigenvalues \
+		../Ambiente/libs/Eigen/src/Eigenvalues/Tridiagonalization.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealSchur.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/EigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexSchur.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealQZ.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/RealSchur_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/ComplexSchur_LAPACKE.h \
+		../Ambiente/libs/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_LAPACKE.h \
+		../Ambiente/libs/Eigen/Sparse \
+		../Ambiente/libs/Eigen/SparseCore \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseUtil.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMatrixBase.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseAssign.h \
+		../Ambiente/libs/Eigen/src/SparseCore/CompressedStorage.h \
+		../Ambiente/libs/Eigen/src/SparseCore/AmbiVector.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCompressedBase.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseMap.h \
+		../Ambiente/libs/Eigen/src/SparseCore/MappedSparseMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseVector.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseRef.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCwiseUnaryOp.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseCwiseBinaryOp.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseTranspose.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseBlock.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDot.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseRedux.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDiagonalProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSparseProductWithPruning.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseDenseProduct.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSelfAdjointView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseTriangularView.h \
+		../Ambiente/libs/Eigen/src/SparseCore/TriangularSolver.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparsePermutation.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseFuzzy.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseSolverBase.h \
+		../Ambiente/libs/Eigen/OrderingMethods \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Amd.h \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Ordering.h \
+		../Ambiente/libs/Eigen/src/OrderingMethods/Eigen_Colamd.h \
+		../Ambiente/libs/Eigen/SparseCholesky \
+		../Ambiente/libs/Eigen/src/SparseCholesky/SimplicialCholesky.h \
+		../Ambiente/libs/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h \
+		../Ambiente/libs/Eigen/SparseLU \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_gemm_kernel.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Structs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLUImpl.h \
+		../Ambiente/libs/Eigen/src/SparseCore/SparseColEtree.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Memory.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_relax_snode.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_pivotL.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_panel_dfs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_kernel_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_panel_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_column_dfs.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_column_bmod.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_pruneL.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU_Utils.h \
+		../Ambiente/libs/Eigen/src/SparseLU/SparseLU.h \
+		../Ambiente/libs/Eigen/SparseQR \
+		../Ambiente/libs/Eigen/src/SparseQR/SparseQR.h \
+		../Ambiente/libs/Eigen/IterativeLinearSolvers \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/SolveWithGuess.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/LeastSquareConjugateGradient.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
+		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
+		../Ambiente/logger.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QFile \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qfile.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTextStream \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qtextstream.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMutex \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmutex.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o linearkalmanfilter.o ../Ambiente/linearkalmanfilter.cpp
 
 logger.o: ../Ambiente/logger.cpp ../Ambiente/logger.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
@@ -2289,6 +2990,7 @@ main.o: ../Ambiente/main.cpp ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QObject \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
@@ -2299,6 +3001,8 @@ main.o: ../Ambiente/main.cpp ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTimer \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qtimer.h \
 		../Ambiente/speedcontroller.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/QComboBox \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/qcombobox.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QSurfaceFormat \
@@ -2653,6 +3357,7 @@ mainwindow.o: ../Ambiente/mainwindow.cpp ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QObject \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
@@ -2663,6 +3368,8 @@ mainwindow.o: ../Ambiente/mainwindow.cpp ../Ambiente/mainwindow.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTimer \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qtimer.h \
 		../Ambiente/speedcontroller.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/QComboBox \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/qcombobox.h \
 		../Ambiente/myglwidget.h \
@@ -2692,6 +3399,9 @@ mainwindow.o: ../Ambiente/mainwindow.cpp ../Ambiente/mainwindow.h \
 		../Ambiente/worldconfig.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/QGeoCoordinate \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/qgeocoordinate.h \
+		../Ambiente/immfilter.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QVector \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qvector.h \
 		../Ambiente/terraingrid.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/QLabel \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtWidgets/qlabel.h \
@@ -2741,16 +3451,15 @@ myglwidget.o: ../Ambiente/myglwidget.cpp ../Ambiente/myglwidget.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../Ambiente/worldconfig.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/QGeoCoordinate \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtPositioning/qgeocoordinate.h \
-		../Ambiente/kalmanfilter.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector4D \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector4d.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h \
+		../Ambiente/immfilter.h \
+		../Ambiente/linearkalmanfilter.h \
 		../Ambiente/libs/Eigen/Eigen \
 		../Ambiente/libs/Eigen/Dense \
 		../Ambiente/libs/Eigen/Core \
@@ -3060,13 +3769,20 @@ myglwidget.o: ../Ambiente/myglwidget.cpp ../Ambiente/myglwidget.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
 		../Ambiente/libs/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector2D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector2d.h \
+		../Ambiente/kalmanfilter.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QVector4D \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qvector4d.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QtMath \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmath.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
 		../Ambiente/filterprofiles.h \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QString \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qstring.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QVector \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qvector.h \
 		../Ambiente/gpsfileplayer.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QFile \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qfile.h \
@@ -3081,7 +3797,9 @@ myglwidget.o: ../Ambiente/myglwidget.cpp ../Ambiente/myglwidget.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QTime \
 		../Ambiente/logger.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMutex \
-		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmutex.h
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmutex.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/QPainter \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtGui/qpainter.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o myglwidget.o ../Ambiente/myglwidget.cpp
 
 noiseutils.o: ../Ambiente/noiseutils.cpp ../Ambiente/noiseutils.h \
@@ -3098,6 +3816,10 @@ speedcontroller.o: ../Ambiente/speedcontroller.cpp ../Ambiente/speedcontroller.h
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qobject.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDateTime \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdatetime.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QMap \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qmap.h \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QList \
+		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qlist.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QDebug \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/qdebug.h \
 		../../../sdk/7.3.0/sysroots/armv8a-tdx-linux/usr/include/QtCore/QStringList \

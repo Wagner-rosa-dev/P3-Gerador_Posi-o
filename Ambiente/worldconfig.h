@@ -51,6 +51,12 @@ struct WorldConfig {
     // Tipo: float
     // Descrição: A espessra visual das linhas do grid
     float gridLineThickness = 0.05f; // 5 centimetros de espessura
+
+    // Membro: gridTileSize
+    // O tamanho do "tile" (peça) da grade que é desenhado. Esta peça é movida
+    // para dar a ilusão de uma grade infinita. Um valor maior preenche mais a tela,
+    // um valor menor é um pouco mais eficiente. 40.0 é um bom começo.
+    float gridTileSize = 40.0f;
 };
 
 #endif // WORLDCONFIG_H

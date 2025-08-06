@@ -11,6 +11,7 @@
 #include <cmath> // Inclui cmath para funções matemáticas como sin, cos, etc.
 #include "logger.h"
 #include "terraingrid.h"
+#include <QPainter>
 
 
 // Constantes com o código GLSL dos shaders
@@ -161,16 +162,16 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     m_steeringValue(50), // Inicializa o valor de direção (centro).
     m_hasReferenceCoordinate(false), // inicializa como falso
     m_currentHeading(0.0f), // rumo inicial
-    m_kalmanFilter(nullptr)
+    m_immFilter(nullptr)
 
 {
+    m_immFilter = new immfilter();
     // Conecta o sinal `timeout` do `m_timer` ao slot `gameTick` deste objeto.
     // Isso garante que `gameTick` seja chamado periodicamente para atualizar a lógica do jogo.
     connect(&m_timer, &QTimer::timeout, this, &MyGLWidget::gameTick);
     // Inicia o timer para disparar a cada 16 milissegundos, o que corresponde a aproximadamente 60 quadros por segundo (1000ms / 16ms = 62.5 FPS).
     m_timer.start(16);
 
-    #define USE_LIVE_GPS
 
 #ifdef USE_LIVE_GPS
     // Nova lógica do controlador:
@@ -186,7 +187,7 @@ MyGLWidget::MyGLWidget(QWidget *parent)
     connect(m_speedController, &SpeedController::gpsDataUpdate, this, &MyGLWidget::onGpsDataUpdate);
     // Inicia a escuta na porta serial especificada.
     // É importante verificar qual porta USB está sendo usada no Linux.
-    m_speedController->startListening("/dev/ttymxc1");
+    m_speedController->startListening("/dev/ttyACM0");
 
 #else
     // Lógica para reprodução de arquivo GPS (GpsFilePlayer)
@@ -214,8 +215,8 @@ MyGLWidget::MyGLWidget(QWidget *parent)
 MyGLWidget::~MyGLWidget() {
     makeCurrent(); // Garante que o contexto OpenGL está ativo para limpeza.
     // Objetos QOpenGL* (shaders, buffers, vao) são limpos por seus destrutores.
-    delete m_kalmanFilter;
-    m_kalmanFilter = nullptr;
+    delete m_immFilter;
+    m_immFilter = nullptr;
     doneCurrent(); // Libera o contexto OpenGL.
 }
 
@@ -309,6 +310,16 @@ void MyGLWidget::paintGL() {
 
     // Limpa os buffers de cor e profundidade antes de desenhar o novo quadro.
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //logica para exibir mensagem de perda de sinal RTK
+    if (m_isRtkSignalLost) {
+        QPainter painter(this);
+        painter.setPen(Qt::red);
+        painter.setFont(QFont("Arial", 24, QFont::Bold));
+        painter.drawText(rect(), Qt::AlignHCenter, "Sinal RTK perdido ou baixa qualidade!");
+        painter.end();
+        return;
+    }
 
     // Verifica se os programas de shader estão linkados corretamente.
     bool terrainShaderOk = m_terrainShaderProgram.isLinked();
@@ -438,29 +449,28 @@ void MyGLWidget::resizeGL(int w, int h) {
 void MyGLWidget::gameTick() {
     double dt = m_gameTickTimer.restart() / 1000.0;
 
-    // A nova lógica de estado agora vive aqui dentro.
-    if (m_kalmanFilter && m_kalmanFilter->isInitialized()) {
-        // 1. PREDIÇÃO: O trabalho do gameTick agora é avançar o estado do filtro no tempo.
-        //    O filtro usa seu modelo interno de velocidade constante para prever a próxima posição.
-        m_kalmanFilter->predict(dt);
+    if (m_immFilter && m_immFilter->isInitialized()) {
+        // ✅ USA A PREVISÃO SUAVE para a posição visual
+        QVector2D predicted_pos = m_immFilter->predictSmoothPosition(dt);
 
-        // 2. ATUALIZAÇÃO DO VISUAL: Pegamos a posição e velocidade diretamente do estado ATUALIZADO do filtro.
-        QVector2D filtered_pos = m_kalmanFilter->getStatePosition();
-        QVector2D filtered_vel = m_kalmanFilter->getStateVelocity();
+        // Usa o estado combinado mais recente para velocidade e rotação
+        QVector2D filtered_vel = m_immFilter->getStateVelocity();
 
-        // Atualiza a posição 3D do trator com base na saída do filtro.
-        m_tractorPosition.setX(filtered_pos.x());
-        m_tractorPosition.setZ(filtered_pos.y()); // Lembre-se que o Y do filtro é o Z do nosso mundo.
+        m_tractorPosition.setX(predicted_pos.x());
+        m_tractorPosition.setZ(predicted_pos.y());
         m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
 
-        // A velocidade também vem direto do filtro (magnitude do vetor velocidade).
         m_tractorCurrentSpeed = filtered_vel.length();
 
-        // A rotação (direção) também é derivada da velocidade.
-        if (m_tractorCurrentSpeed > 0.1) { // Só atualiza a direção se estiver se movendo
-            // Usamos atan2 para obter o ângulo do vetor velocidade.
+        if (m_tractorCurrentSpeed > 0.1) {
             m_tractorRotation = -qRadiansToDegrees(qAtan2(filtered_vel.x(), -filtered_vel.y()));
         }
+
+        // ✅✅ CÓDIGO FALTANTE ADICIONADO AQUI ✅✅
+        // A cada quadro, buscamos as probabilidades atuais do MMI e emitimos o sinal.
+        const Eigen::VectorXd& probs = m_immFilter->getModeProbabilities();
+        QString status = (probs(0) > probs(1)) ? "Reta (FKL)" : "Curva (UKF)";
+        emit immStatusUpdated(status, probs(0) * 100.0, probs(1) * 100.0);
     }
 
     // Lógica de leitura de temperatura da CPU (a cada 2 segundos):
@@ -575,95 +585,182 @@ void MyGLWidget::onSteeringUpdate(int steeringValue) {
 void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     m_currentGpsData = data;
 
+    //portal de qualidade RTK
+    if (m_requiredRtkMode == "Com RTK") {
+        bool isRtkQualityOk = (data.fixQuality == 4 || data.fixQuality == 5);
+        bool isHdopOk = (data.hdop < 2.0 && data.hdop > 0);
+
+        if (!isRtkQualityOk || !isHdopOk) {
+            MY_LOG_WARNING("GPS_QualityGate", QString("Dado descartado no modo 'Com RTK'. Qualidade: %1, HDOP: %2")
+                                                  .arg(data.fixQuality).arg(data.hdop));
+            m_isRtkSignalLost = true;
+            update();
+            return;
+        }
+    }
+
+    m_isRtkSignalLost = false;
+
     if (!m_currentGpsData.isValid) {
-        // Usando MY_LOG_WARNING
-        MY_LOG_WARNING("GPS_Processor", "Dado GPS recebido inválido. Posição do trator não atualizada.");
+        MY_LOG_WARNING("GPS_Processor", "Dado GPS recebido inválido. Posição não atualizada.");
         return;
     }
 
-    m_tractorTargetSpeed = m_currentGpsData.speedKnots * 0.514444f;
-    m_currentHeading = m_currentGpsData.courseOverGround;
-    m_tractorRotation = -m_currentHeading;
+    // 1. Defina o ponto de referência se ainda não tiver um.
+    if (!m_hasReferenceCoordinate) {
+        m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
+        m_hasReferenceCoordinate = true;
+    }
 
-    double deltaX_world = 0.0;
-    double deltaZ_world = 0.0;
+    // 2. Calcule as coordenadas do mundo a partir do Lat/Lon (sem duplicação).
+    QGeoCoordinate currentCoord(data.latitude, data.longitude);
+    double distance = m_referenceCoordinate.distanceTo(currentCoord);
+    double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
+    double radAzimuth = qDegreesToRadians(azimuth);
+    double deltaX_world = distance * qSin(radAzimuth);
+    double deltaZ_world = -distance * qCos(radAzimuth);
 
-    MY_LOG_DEBUG("GPS_Processor", QString("GPS Bruto (Lat, Lon): %1,%2").arg(data.latitude, 0, 'f', 6).arg(data.longitude, 0, 'f', 6));
+    // 3. Atualize o perfil adaptativo ANTES de rodar o filtro.
+    updateFilterParameters(data);
 
-    if (m_kalmanFilter && !m_kalmanFilter->isInitialized()) {
-        if (!m_hasReferenceCoordinate) {
-            m_referenceCoordinate = QGeoCoordinate(data.latitude, data.longitude);
-            m_hasReferenceCoordinate = true;
-        }
-        QGeoCoordinate currentCoord(data.latitude, data.longitude);
-        double distance = m_referenceCoordinate.distanceTo(currentCoord);
-        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
-        double radAzimuth = qDegreesToRadians(azimuth);
+    // 4. Chame o filtro para processar a medição.
+    if (m_immFilter) {
+        m_immFilter->updateWithMeasurement(deltaX_world, deltaZ_world);
+    }
 
-        deltaX_world = distance * qSin(radAzimuth);
-        deltaZ_world = -distance * qCos(radAzimuth);
-
-        m_kalmanFilter->reset(deltaX_world, deltaZ_world);
-        MY_LOG_INFO("GPS_Processor", "Filtro de Kalman inicializado com a primeira coordenada valida");
-
-
-    } else if (m_kalmanFilter) {
-        QGeoCoordinate currentCoord(data.latitude, data.longitude);
-        double distance = m_referenceCoordinate.distanceTo(currentCoord);
-        double azimuth = m_referenceCoordinate.azimuthTo(currentCoord);
-        double radAzimuth = qDegreesToRadians(azimuth);
-        deltaX_world = distance * qSin(radAzimuth);
-        deltaZ_world = -distance * qCos(radAzimuth);
-
-        double dt = m_lastGpsData.timestamp.msecsTo(m_currentGpsData.timestamp) / 1000.0;
-        if (dt <= 0) dt = 0.016;
-
-        if (m_lastGpsData.isValid) {
-            m_kalmanFilter->predict(dt);
-
-        }
-            m_kalmanFilter->update(deltaX_world, deltaZ_world);
-        }
-
+    // 5. Atualize o estado visual do trator.
     m_lastGpsData = m_currentGpsData;
     checkMovementStatus();
-
 }
 
 
 //Verifica se o trator esta em linha reta ou fazendo curva
 void MyGLWidget::checkMovementStatus() {
-    //Requer pelo menos dois pontos de dados GPS para comparar
+    // Requer pelo menos dois pontos de dados GPS para comparar
     if (!m_lastGpsData.isValid || !m_currentGpsData.isValid) {
-        emit movementStatusUpdated("Aguardando dados GPS...");
+        m_movimentStatus = "Aguardando dados GPS...";
+        emit movementStatusUpdated(m_movimentStatus);
         return;
     }
 
-    //limites de tolerancia
-    const float SPEED_THRESHOLD = 0.5f; //limite de velocidade para considerar o trator parado relação m/s
-    const float HEADIND_CHANGE_THRESHOLD = 2.0f; // Graus, mudança maxima para ser considerado linha reta
-    //const float COORD_CHANGE_PROPORTIONALITY_THRESHOLD = 0.1f; // limite para proporicionalidade (idealmente baixo)
+    const float SPEED_THRESHOLD = 0.5f; // limite de velocidade em m/s
+    const float HEADING_CHANGE_THRESHOLD = 2.0f; // Graus
 
-    //considerar parado se a velocidade for muito baixa
-    if (m_tractorSpeed < SPEED_THRESHOLD) {
-        emit movementStatusUpdated("Parado");
-        return;
-    }
-
-    //Variação do rumo (heading) entre leitura atual e leitura anterior
-    float headingDelta = m_currentGpsData.courseOverGround - m_lastGpsData.courseOverGround;
-    //normalizar a variação para estar entre -180 e 180 graus
-    if (headingDelta > 180.0f) headingDelta -= 360.0f;
-    if (headingDelta < -180.0f) headingDelta += 360.0f;
-
-    //Verificar se esta fazendo curva
-    if (qAbs(headingDelta) > HEADIND_CHANGE_THRESHOLD) {
-        emit movementStatusUpdated("Fazendo Curva!");
+    // 1. Usa a velocidade já filtrada (m_tractorCurrentSpeed), que é mais estável.
+    if (m_tractorCurrentSpeed < SPEED_THRESHOLD) {
+        // 2. GUARDA o resultado na variável de membro.
+        m_movimentStatus = "Parado";
     } else {
-        emit movementStatusUpdated("Em linha reta");
+        // Lógica de variação de rumo (continua a mesma)
+        float headingDelta = m_currentGpsData.courseOverGround - m_lastGpsData.courseOverGround;
+        if (headingDelta > 180.0f) headingDelta -= 360.0f;
+        if (headingDelta < -180.0f) headingDelta += 360.0f;
+
+        if (qAbs(headingDelta) > HEADING_CHANGE_THRESHOLD) {
+            // 2. GUARDA o resultado na variável de membro.
+            m_movimentStatus = "Fazendo Curva";
+        } else {
+            // 2. GUARDA o resultado na variável de membro.
+            m_movimentStatus = "Em linha reta";
+        }
     }
 
-    QGeoCoordinate currentCoord(m_currentGpsData.latitude, m_currentGpsData.longitude);
-
+    // 3. EMITE o status final a partir da variável, uma única vez.
+    emit movementStatusUpdated(m_movimentStatus);
 }
 
+void MyGLWidget::updateFilterParameters(const GpsData& data) {
+    if (!m_immFilter) {
+        return;
+    }
+
+    FilterProfile dynamicProfile;
+    bool profileSet = false;
+
+    // Se o status for "Parado", force o uso do perfil "Parado" e ignore o resto.
+    if (m_movimentStatus == "Parado") {
+        dynamicProfile = PREDEFINED_PROFILES["Parado"];
+        // A incerteza da medição (R) ainda deve ser ajustada pela qualidade do sinal.
+        dynamicProfile.R_measurement_uncertainty *= qMax(1.0f, data.hdop);
+        profileSet = true;
+        MY_LOG_DEBUG("Filter_Params", "Modo PARADO ativado. Forçando perfil de baixo Q.");
+    }
+
+    // Se o perfil não foi definido pelo modo "Parado", usa a lógica normal.
+    if (!profileSet) {
+        // --- 1. Cálculo Dinâmico de R (Incerteza da Medição) ---
+        double base_R;
+        switch (data.fixQuality) {
+        case 4: base_R = 0.05; break;
+        case 5: base_R = 0.2; break;
+        case 2: base_R = 1.0; break;
+        case 1: base_R = 5.0; break;
+        default: base_R = 10.0; break;
+        }
+        dynamicProfile.R_measurement_uncertainty = base_R * qMax(1.0f, data.hdop);
+
+        // --- 2. Cálculo Dinâmico de Q (Incerteza do Processo) ---
+        float speedKmh = m_tractorCurrentSpeed * 3.6f;
+        if (speedKmh < 1.0f) {
+            dynamicProfile.Q_process_uncertainty = 0.0001;
+        } else if (speedKmh > 15.0f) {
+            dynamicProfile.Q_process_uncertainty = 0.01;
+        } else {
+            dynamicProfile.Q_process_uncertainty = 0.001;
+        }
+    }
+
+    // Log e aplicação do perfil (esta parte continua a mesma)
+    MY_LOG_DEBUG("Filter_Params", QString("Parâmetros Dinâmicos: R=%1, Q=%2 (Qualidade: %3, HDOP: %4, Status: %5)")
+                                    .arg(dynamicProfile.R_measurement_uncertainty, 0, 'f', 4)
+                                      .arg(dynamicProfile.Q_process_uncertainty, 0, 'f', 9)
+                                      .arg(data.fixQuality)
+                                      .arg(data.hdop, 0, 'f', 2)
+                                      .arg(m_movimentStatus));
+
+    m_immFilter->setProfile(dynamicProfile);
+}
+
+void MyGLWidget::onRtkModeChanged(const QString& newMode) {
+    m_requiredRtkMode = newMode;
+    MY_LOG_INFO("RTK_Mode", QString("Modo de operação alterado para: %1").arg(newMode));
+    m_isRtkSignalLost = false;
+    m_immFilter->reset(m_tractorPosition.x(), m_tractorPosition.z());
+}
+
+float MyGLWidget::calculateSignalConfidence(const GpsData& data) {
+    float confidence = 1.0f; //começa com 100% de confiança
+
+    //penalidade por geometria de satelite ruim (HDOP)
+    if (data.hdop > 1.5f) confidence *= 0.9f; // HDOP aceitavel, mas não ideal.
+    if (data.hdop > 2.5f) confidence *= 0.7f;
+    if (data.hdop > 5.0f) confidence *= 0.4f;
+
+    //penalidade por divercia entre fontes de HDOP (verificação de sanidade)
+    if (qAbs(data.hdop - data.gsa_hdop) > 0.5) {
+        confidence *= 0.08f;
+    }
+
+    //penalidade por sinal fraco (SNR - Relação Sinal-Ruído)
+    if (data.usedSatellites.isEmpty()) {
+        return 0.1f;
+    } else {
+        int totalSnr = 0;
+        int validSnrCount = 0;
+        for (int satId : data.usedSatellites) {
+            if (data.satelliteSnr.contains(satId)) {
+                totalSnr += data.satelliteSnr[satId];
+                validSnrCount++;
+            }
+        }
+
+        if (validSnrCount > 0) {
+            float avgSnr = static_cast<float>(totalSnr) / validSnrCount;
+            if (avgSnr < 40) confidence *= 0.9f; //sinal bom, mas nao excelente
+            if (avgSnr < 35) confidence *= 0.7f; //Sinal Fraco, possivel multipercurso
+        } else {
+            confidence *= 0.5f; //nao conseguimos obter o SNR dos satelites usados
+        }
+    }
+    return confidence;
+}

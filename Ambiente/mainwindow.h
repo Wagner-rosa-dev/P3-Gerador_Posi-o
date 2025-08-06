@@ -38,7 +38,8 @@ public:
     ~MainWindow();
 
 
-
+signals:
+    void rtkModeChanged(const QString& mode);
 
 
 private slots:
@@ -71,8 +72,9 @@ private slots:
     //novo slot para o status de movimento
     void updateMovementStatusLabel(const QString& status);
 
+    void updateImmStatus(const QString& status, double probReta, double probCurva);
 
-    void onProfileChanged(int index);
+
 
 private:
     // Membro: m_glWidget
@@ -110,9 +112,9 @@ private:
 
     QDateTime m_lastGpsTimestamp;
 
-    QLabel *m_profileLabel;
-    QComboBox *m_profileSelector;
+    QLabel *m_immStatusLabel;
 
+    QComboBox *m_rtkModeComboBox;
 
 
 

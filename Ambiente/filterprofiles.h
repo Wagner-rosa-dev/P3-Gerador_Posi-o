@@ -21,6 +21,9 @@ static const QMap<QString, FilterProfile> PREDEFINED_PROFILES = {
 {
     "Veículo Àgil",
     {0.05, 0.01}
+},
+{
+     "Parado", {0.8, 1e-9}
 }
 };
 

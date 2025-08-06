@@ -14,9 +14,10 @@
 #include "speedcontroller.h"    // Inclui a definição da classe SpeedController.
 #include "worldconfig.h"        // Inclui a estrutura WorldConfig.
 #include <QGeoCoordinate>
-#include "kalmanfilter.h"
+#include "immfilter.h"
 #include "gpsfileplayer.h"
 #include "terraingrid.h"
+
 
 // Estrutura: SceneMatrices
 // Descrição: Uma estrutura para agrupar as matrizes de projeção e visão da cena.
@@ -59,7 +60,10 @@ public:
     //            dos objetos relacionados ao GL.
     ~MyGLWidget();
 
-    KalmanFilter* getKalmanFilter() const { return m_kalmanFilter; }
+public slots:
+    void onRtkModeChanged(const QString& newMode);
+
+
 
 signals:
     // Sinais (Anúncios que a classe faz):
@@ -93,6 +97,8 @@ signals:
 
     //novo sinal para status da linha reta/curva
     void movementStatusUpdated(const QString& status);
+
+    void immStatusUpdated(const QString& status, double probReta, double probCurva);
 
 protected:
     // Método: initializeGL
@@ -145,6 +151,10 @@ private:
     void setupTractorGL();
 
     void checkMovementStatus();
+
+    float calculateSignalConfidence(const GpsData& data);
+
+    void updateFilterParameters(const GpsData& data);
 
     // Membro: m_tractorRotation
     // Tipo: float
@@ -264,7 +274,12 @@ private:
     bool m_hasReferenceCoordinate;
     float m_currentHeading; // Rumo atual do trator (do GPS)
 
-    KalmanFilter *m_kalmanFilter;
+    immfilter *m_immFilter;
+
+    QString m_requiredRtkMode;
+    bool m_isRtkSignalLost;
+
+    QString m_movimentStatus;
 
 };
 

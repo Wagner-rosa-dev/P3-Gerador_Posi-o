@@ -10,6 +10,7 @@
 #include <Dense>
 #include <QDebug>
 #include "filterprofiles.h"
+#include "linearkalmanfilter.h"
 
 // Classe: KalmanFilter
 // Descrição: Implementa um filtro de Kalman linear para estimar a posição e velocidade 2D
@@ -41,7 +42,7 @@ public:
     // Parâmetros:
     //   - measuredX: Posição X medida pelo GPS.
     //   - measuredZ: Posição Z medida pelo GPS.
-    void update(double measuredX, double measuredZ);
+    UpdateResult update(double measuredX, double measuredZ);
 
     // Método: getStatePosition
     // Descrição: Retorna a posição (X, Z) estimada pelo filtro de Kalman.
@@ -59,6 +60,12 @@ public:
     void reset(double initialX = 0.0, double initialZ = 0.0);
 
     void setProfile(const FilterProfile& profile);
+
+    const Eigen::VectorXd& getState() const { return m_state; }
+    const Eigen::MatrixXd& getCovariance() const { return m_P; }
+
+    void setState(const Eigen::VectorXd& state, const Eigen::MatrixXd& covariance);
+
 
     bool isInitialized() const {
         return m_isInitialized;

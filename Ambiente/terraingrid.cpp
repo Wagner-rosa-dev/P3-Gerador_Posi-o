@@ -88,6 +88,9 @@ void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCam
 
     // A geometria da grade só precisa ser gerada uma vez, a menos que o tamanho de renderização mude.
     if (m_vertexCount == 0) {
+
+        const float GRID_TITLE_SIZE = m_config->gridTileSize;
+
         MY_LOG_INFO("TerrainGrid", QString("Gerando geometria do grid. Tamanho da grade: %1 chunks.").arg(terrainRenderSizeChunks));
 
         std::vector<float> gridVertices;
@@ -95,10 +98,10 @@ void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCam
         float line_half_thickness = m_config->gridLineThickness / 2.0f;
 
         // A grade é gerada centrada em (0,0) no seu próprio espaço de modelo.
-        float totalGridWorldSize = static_cast<float>(terrainRenderSizeChunks) * m_config->chunkSize;
-        float halfGridSize = totalGridWorldSize / 2.0f;
+        //float totalGridWorldSize = static_cast<float>(terrainRenderSizeChunks) * m_config->chunkSize;
+        float halfGridSize = GRID_TITLE_SIZE / 2.0f;
+        int numGridLines = static_cast<int>(GRID_TITLE_SIZE / m_config->gridSquareSize) + 1;
 
-        int numGridLines = static_cast<int>(totalGridWorldSize / m_config->gridSquareSize) + 1;
 
         // Gerar linhas paralelas ao eixo X (horizontais)
         for (int i = 0; i < numGridLines; ++i) {
@@ -143,12 +146,6 @@ void TerrainGrid::updateGridGeometry(float currentCameraWorldX, float currentCam
         }
     }
 }
-
-
-
-
-
-
 
 /**
  * @brief Desenha a grade na tela.

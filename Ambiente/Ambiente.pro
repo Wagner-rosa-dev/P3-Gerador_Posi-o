@@ -13,7 +13,9 @@ SOURCES += \
     chunk.cpp \
     chunkworker.cpp \
     gpsfileplayer.cpp \
+    immfilter.cpp \
     kalmanfilter.cpp \
+    linearkalmanfilter.cpp \
     logger.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -29,7 +31,9 @@ HEADERS += \
     chunkworker.h \
     filterprofiles.h \
     gpsfileplayer.h \
+    immfilter.h \
     kalmanfilter.h \
+    linearkalmanfilter.h \
     logger.h \
     mainwindow.h \
     myglwidget.h \
@@ -49,5 +53,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 INCLUDEPATH += $$PWD/libs/Eigen
 #Para que o compilador possa encontrar os cabeçalhos da eigen
+
+DEFINES += USE_LIVE_GPS
 
 

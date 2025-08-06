@@ -72,7 +72,7 @@ void SpeedController::startListening(const QString &portName)
     m_serialPort->setFlowControl(QSerialPort::NoFlowControl); // Define sem controle de fluxo.
 
     if (m_serialPort->open(QIODevice::ReadOnly)) { // Tenta abrir a porta serial em modo somente leitura.
-        MY_LOG_INFO("Serial", QString("controlador de velocidade conectado na porta serial").arg(portName));
+        MY_LOG_INFO("Serial", QString("controlador de velocidade conectado na porta serial %1").arg(portName));
     } else {
         MY_LOG_ERROR("Serial", QString("Não foi possivel abrir a porta %1: %2").arg(portName).arg(m_serialPort->errorString()));
     }

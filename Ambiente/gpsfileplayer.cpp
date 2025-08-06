@@ -145,75 +145,53 @@ void GpsFilePlayer::processNextLine()
         return;
     }
 
-    // Lógica de Parsing NMEA (adaptada de SpeedController::handleReadyRead)
     QStringList parts = line.split(',');
+    if (parts.isEmpty()) return;
+    QString sentenceHeader = parts[0];
 
-    if (parts.size() > 0) {
-        QString sentenceHeader = parts[0]; // Ex: "$GPRMC" ou "$GNRMC"
-
-        QDateTime messageDateTime = QDateTime::currentDateTime();
-
-        if (parts.size() > 1 && !parts[1].isEmpty()) {
-            QTime nmeaTime = QTime::fromString(parts[1].left(6), "hhmmss.zz");
-            if (nmeaTime.isValid()) {
-                messageDateTime.setTime(nmeaTime);
-            }
+    // A sentença RMC marca o FIM de uma época e o INÍCIO da próxima.
+    if (sentenceHeader.endsWith("RMC")) {
+        // 1. A época anterior acabou. Se coletamos dados válidos, EMITA o sinal agora.
+        if (m_buildingGpsData.isValid) {
+            emit gpsDataUpdate(m_buildingGpsData);
         }
 
-        if (sentenceHeader.endsWith("RMC") && parts.size() >= 10 && !parts[9].isEmpty()) {
-            QDate nmeaDate = QDate::fromString(parts[9], "ddMMyy");
-            if(nmeaDate.isValid()) {
-                messageDateTime.setDate(nmeaDate);
-            }
+        // 2. Comece uma nova época de coleta, limpando os dados antigos.
+        m_buildingGpsData = GpsData();
+
+        // 3. Processe a sentença RMC atual para a *nova* época.
+        if (parts.size() >= 13 && parts[2] == "A") {
+            m_buildingGpsData.isValid = true;
+            m_buildingGpsData.latitude = convertNmeaToDecimal(parts[3], parts[4]);
+            m_buildingGpsData.longitude = convertNmeaToDecimal(parts[5], parts[6]);
+            m_buildingGpsData.speedKnots = parts[7].toFloat();
+            m_buildingGpsData.courseOverGround = parts[8].toFloat();
+            // Adicione a extração de data/hora aqui se desejar um timestamp preciso
         }
-        currentGpsData.timestamp = messageDateTime;
-
-        if (sentenceHeader.endsWith("RMC")) { // Verifica se termina com "RMC" (para GPRMC, GNRMC, etc.)
-            if (parts.size() >= 11) {
-
-                QString status = parts[2]; // A = active, V = void
-
-                if (status == "A") { // Dados válidos
-                    currentGpsData.isValid = true;
-                    currentGpsData.latitude = convertNmeaToDecimal(parts[3], parts[4]);
-                    currentGpsData.longitude = convertNmeaToDecimal(parts[5], parts[6]);
-                    currentGpsData.speedKnots = parts[7].toFloat(); // Velocidade em nós
-                    currentGpsData.courseOverGround = parts[8].toFloat(); // Rumo em graus
-
-                    MY_LOG_DEBUG("GpsFilePlayer_Parsed", QString("RMC Parseado - Lat:%1 Lon:%2 Vel(nos):%3 Rumo:%4")
-                                                             .arg(currentGpsData.latitude, 0, 'f', 6)
-                                                             .arg(currentGpsData.longitude, 0, 'f', 6)
-                                                             .arg(currentGpsData.speedKnots, 0, 'f', 2)
-                                                             .arg(currentGpsData.courseOverGround, 0, 'f', 2));
+    } else if (m_buildingGpsData.isValid) {
+        // Se a época atual é válida, adicione informações de outras sentenças.
+        if (sentenceHeader.endsWith("GGA") && parts.size() >= 9) {
+            m_buildingGpsData.fixQuality = parts[6].toInt();
+            m_buildingGpsData.numSatellites = parts[7].toInt();
+            m_buildingGpsData.hdop = parts[8].toFloat();
+            m_buildingGpsData.altitude = parts[9].toFloat();
+        } else if (sentenceHeader.endsWith("GSA") && parts.size() >= 18) {
+            m_buildingGpsData.usedSatellites.clear();
+            for (int i = 3; i <= 14; ++i) {
+                if (!parts[i].isEmpty()) {
+                    m_buildingGpsData.usedSatellites.append(parts[i].toInt());
                 }
             }
-        } else if (sentenceHeader.endsWith("GGA")) { // Verifica se termina com "GGA" (para GPGGA, GNGGA, etc.)
-            if (parts.size() >= 14) {
-                int fixQuality = parts[6].toInt(); // 0 = no fix, 1 = GPS Fix, 2 = DGPS Fix
-                currentGpsData.fixQuality = fixQuality;
-                currentGpsData.numSatellites = parts[7].toInt();
-
-                if (fixQuality >= 1) { // Temos uma fixação GPS
-                    currentGpsData.altitude = parts[9].toFloat(); // Altitude em metros
-                    // Se RMC não validou, GGA pode validar a posição (mas RMC é preferido para velocidade/rumo)
-                    if (!currentGpsData.isValid) {
-                        currentGpsData.isValid = true;
-                        currentGpsData.latitude = convertNmeaToDecimal(parts[2], parts[3]);
-                        currentGpsData.longitude = convertNmeaToDecimal(parts[4], parts[5]);
-                    }
-                    MY_LOG_DEBUG("GpsFilePlayer_Parsed", QString("GGA Parseado - Alt:%1 Fix:%2 Sats:%3")
-                                                             .arg(currentGpsData.altitude, 0, 'f', 2)
-                                                             .arg(currentGpsData.fixQuality)
-                                                             .arg(currentGpsData.numSatellites));
+            m_buildingGpsData.gsa_hdop = parts[16].toFloat();
+        } else if (sentenceHeader.endsWith("GSV") && parts.size() >= 8) {
+            // A GSV pode vir em múltiplos pacotes. Esta lógica simples pega todos.
+            for (int i = 4; i < parts.size() - 3; i += 4) {
+                int satId = parts[i].toInt();
+                int snr = parts[i+3].isEmpty() ? 0 : parts[i+3].toInt();
+                if (satId > 0) {
+                    m_buildingGpsData.satelliteSnr[satId] = snr;
                 }
             }
         }
-    }
-
-    if (currentGpsData.isValid) {
-        emit gpsDataUpdate(currentGpsData); // Emite o sinal com os dados processados
-    } else {
-        MY_LOG_WARNING("GpsFilePlayer_Parsed", QString("Dados GPS inválidos ou sentença NMEA não reconhecida/válida: %1").arg(line));
-        // Se a linha não for válida, processa a próxima imediatamente para não atrasar o playback
     }
 }

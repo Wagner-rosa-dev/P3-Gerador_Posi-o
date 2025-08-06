@@ -4,17 +4,34 @@
 #include <QObject>           // Classe base para o sistema de sinais/slots do Qt.
 #include <QtSerialPort/QSerialPort> // Classe para comunicação com portas seriais.
 #include <QDateTime>
+#include <QMap>
+#include <QList>
 
 struct GpsData {
+    //Dados primarios
     double latitude;
     double longitude;
-    float speedKnots;
-    float courseOverGround;
     float altitude;
-    int fixQuality;
-    int numSatellites;
+    QString rtkModeIndicator;
     QDateTime timestamp;
     bool isValid;
+
+    //qualidade da posição (principalmente GGA
+    int fixQuality;
+    int numSatellites;
+    float hdop; //Horizontal Dilution of Precision
+
+    //Movimento (principalmente da VTG e RMC)
+    float speedKnots;
+    float courseOverGround;
+
+    //Dados de verificação e Saúde
+    float gsa_hdop;
+    QList<int> usedSatellites;
+    QMap<int, int> satelliteSnr;
+
+    //Construtor para iniciar os valores
+    GpsData() : isValid(false), fixQuality(0), numSatellites(0), hdop(99.0), gsa_hdop(99.0) {}
 };
 
 
