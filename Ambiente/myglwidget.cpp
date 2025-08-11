@@ -450,7 +450,6 @@ void MyGLWidget::gameTick() {
     double dt = m_gameTickTimer.restart() / 1000.0;
 
     if (m_immFilter && m_immFilter->isInitialized()) {
-        // ✅ USA A PREVISÃO SUAVE para a posição visual
         QVector2D predicted_pos = m_immFilter->predictSmoothPosition(dt);
 
         // Usa o estado combinado mais recente para velocidade e rotação
@@ -466,7 +465,6 @@ void MyGLWidget::gameTick() {
             m_tractorRotation = -qRadiansToDegrees(qAtan2(filtered_vel.x(), -filtered_vel.y()));
         }
 
-        // ✅✅ CÓDIGO FALTANTE ADICIONADO AQUI ✅✅
         // A cada quadro, buscamos as probabilidades atuais do MMI e emitimos o sinal.
         const Eigen::VectorXd& probs = m_immFilter->getModeProbabilities();
         QString status = (probs(0) > probs(1)) ? "Reta (FKL)" : "Curva (UKF)";

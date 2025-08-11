@@ -20,45 +20,66 @@ MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent) // Chama o construtor da classe base QWidget.
 
 {
+    QFont labelFont("Arial", 12, QFont::Bold); // Define a fonte para os labels.
     // 1. Cria os widgets que farão parte da janela:
     // Cria uma instância de MyGLWidget, que é a área de renderização OpenGL.
     m_glWidget = new MyGLWidget(this);
     // Cria QLabels para exibir informações.
     m_fpsLabel = new QLabel("FPS: --", this);
-    m_tempLabel = new QLabel("CPU: -- °C", this);
-    m_kmLabel = new QLabel("Velocidade: 0.0 km/h", this);
-    m_lonlabel = new QLabel("Lon: 0.0",this);
-    m_latLabel = new QLabel("Lat: 0.0", this);
-    m_movementStatusLabel = new QLabel("Status: Parado", this); // novo label
-    m_lastGpsTimestamp = QDateTime();
-    m_immStatusLabel = new QLabel("Filtro: --", this);
-    m_rtkModeComboBox = new QComboBox(this);
-
-
-
-
-
-
-    //* 2. Estiliza os labels para que fiquem bem visíveis:
-    QFont labelFont("Arial", 12, QFont::Bold); // Define a fonte para os labels.
     m_fpsLabel->setFont(labelFont); // Aplica a fonte ao label de FPS.
     m_fpsLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de FPS.
+    connect(m_glWidget, &MyGLWidget::fpsUpdated, this, &MainWindow::updateFpsLabel);
+
+    m_tempLabel = new QLabel("CPU: -- °C", this);
     m_tempLabel->setFont(labelFont); // Aplica a fonte ao label de temperatura.
     m_tempLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de temperatura.
+    // Conecta o sinal `tempUpdated` do `m_glWidget` ao slot `updateTempLabel` desta janela.
+    connect(m_glWidget, &MyGLWidget::tempUpdated, this, &MainWindow::updateTempLabel);
+
+    m_kmLabel = new QLabel("Velocidade: 0.0 km/h", this);
     m_kmLabel->setFont(labelFont); // Aplica a fonte ao label de velocidade.
     m_kmLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de velocidade.
-    m_latLabel->setFont(labelFont); // Aplica a fonte ao label de latitude.
-    m_latLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de latitude.
+    // Conecta o sinal `kmUpdated` do `m_glWidget` ao slot `updateKmLabel` desta janela.
+    connect(m_glWidget, &MyGLWidget::kmUpdated, this, &MainWindow::updateKmLabel);
+
+    m_lonlabel = new QLabel("Lon: 0.0",this);
     m_lonlabel->setFont(labelFont); // Aplica a fonte ao label de longitude.
     m_lonlabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de longitude.
+
+    m_latLabel = new QLabel("Lat: 0.0", this);
+    m_latLabel->setFont(labelFont); // Aplica a fonte ao label de latitude.
+    m_latLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de latitude.
+
+    m_movementStatusLabel = new QLabel("Status: Parado", this); // novo label
     m_movementStatusLabel->setFont(labelFont); // Aplica a fonte ao label no status de movimento
     m_movementStatusLabel->setStyleSheet("color: white; background-color: rgba(0,0,0,100); padding: 2px"); // Estilo CSS para o label de longitude.
+    //conecta o novo sinal do myglwidget ao slot desta janela
+    connect(m_glWidget, &MyGLWidget::movementStatusUpdated, this, &MainWindow::updateMovementStatusLabel);
+
+    m_lastGpsTimestamp = QDateTime();
+
+    m_immStatusLabel = new QLabel("Filtro: --", this);
     m_immStatusLabel->setFont(labelFont);
     m_immStatusLabel->setStyleSheet("color: yellow; background-color: rgba(0,0,0,100); padding: 2px");
+    //sinal do filtro
+    connect(m_glWidget, &MyGLWidget::immStatusUpdated, this, &MainWindow::updateImmStatus);
+
+    m_rtkModeComboBox = new QComboBox(this);
     m_rtkModeComboBox->setFont(labelFont);
     m_rtkModeComboBox->addItem("Sem RTK");
     m_rtkModeComboBox->addItem("Com RTK");
     m_rtkModeComboBox->setStyleSheet("QComboBox { color: white; background-color: #333; selection-background-color: #555; }");
+    //Sinal da mudança na combobox do RTK
+    connect(m_rtkModeComboBox, &QComboBox::currentTextChanged, this, &MainWindow::rtkModeChanged);
+    connect(this, &MainWindow::rtkModeChanged, m_glWidget, &MyGLWidget::onRtkModeChanged);
+
+
+
+
+    // Conecta o sinal `coordinatesUpdate` do `m_glWidget` ao slot `updateCoordinatesLabel` desta janela.
+    connect(m_glWidget, &MyGLWidget::coordinatesUpdate, this, &MainWindow::updateCoordinatesLabel);
+
+
 
 
 
@@ -91,20 +112,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Sinais e Slots:
     // Conecta o sinal `fpsUpdated` do `m_glWidget` ao slot `updateFpsLabel` desta janela.
-    connect(m_glWidget, &MyGLWidget::fpsUpdated, this, &MainWindow::updateFpsLabel);
-    // Conecta o sinal `tempUpdated` do `m_glWidget` ao slot `updateTempLabel` desta janela.
-    connect(m_glWidget, &MyGLWidget::tempUpdated, this, &MainWindow::updateTempLabel);
-    // Conecta o sinal `kmUpdated` do `m_glWidget` ao slot `updateKmLabel` desta janela.
-    connect(m_glWidget, &MyGLWidget::kmUpdated, this, &MainWindow::updateKmLabel);
-    // Conecta o sinal `coordinatesUpdate` do `m_glWidget` ao slot `updateCoordinatesLabel` desta janela.
-    connect(m_glWidget, &MyGLWidget::coordinatesUpdate, this, &MainWindow::updateCoordinatesLabel);
-    //conecta o novo sinal do myglwidget ao slot desta janela
-    connect(m_glWidget, &MyGLWidget::movementStatusUpdated, this, &MainWindow::updateMovementStatusLabel);
-    //sinal do filtro
-    connect(m_glWidget, &MyGLWidget::immStatusUpdated, this, &MainWindow::updateImmStatus);
-    //Sinal da mudança na combobox do RTK
-    connect(m_rtkModeComboBox, &QComboBox::currentTextChanged, this, &MainWindow::rtkModeChanged);
-    connect(this, &MainWindow::rtkModeChanged, m_glWidget, &MyGLWidget::onRtkModeChanged);
 
     resize(800, 600); // Define o tamanho inicial da janela.
 
