@@ -151,8 +151,9 @@ void main() {
  * define a política de foco para eventos de teclado e configura o SpeedController
  * para receber dados de velocidade e direção da porta serial.
  */
-MyGLWidget::MyGLWidget(QWidget *parent)
+MyGLWidget::MyGLWidget(const WorldConfig& config, QWidget *parent)
     : QOpenGLWidget(parent), // Chama o construtor da classe base QOpenGLWidget.
+    m_worldConfig(config),
     m_tractorRotation(0), // Inicializa a rotação do trator.
     m_extraFunction(nullptr), // Inicializa o ponteiro para funções extras OpenGL.
     m_tractorCurrentSpeed(0.0f),
@@ -291,8 +292,8 @@ void MyGLWidget::initializeGL() {
  */
 void MyGLWidget::paintGL() {
     // Lógica da câmera inteligente (segue o trator):
-    float distancia = 12.0f; // Distância da câmera em relação ao trator.
-    float altura = 3.0f; // Altura da câmera em relação ao trator.
+    float distancia = m_worldConfig.cameraFollowDistance; // Distância da câmera em relação ao trator.
+    float altura = m_worldConfig.cameraFollowHeight; // Altura da câmera em relação ao trator.
 
     // Calcula o ângulo do trator em radianos para determinar seu vetor 'para frente'.
     float angleRad = qDegreesToRadians(m_tractorRotation);
@@ -340,7 +341,7 @@ void MyGLWidget::paintGL() {
         m_terrainShaderProgram.setUniformValue("lightDirection", sunDirection);
         m_terrainShaderProgram.setUniformValue("lightColor", QVector3D(1.0f, 1.0f, 1.0f));
         // Define a cor base do terreno (verde).
-        m_terrainShaderProgram.setUniformValue("objectBaseColor", QVector3D(0.4f, 0.6f, 0.2f));
+        m_terrainShaderProgram.setUniformValue("objectBaseColor", QVector3D(m_worldConfig.terrainColorR, m_worldConfig.terrainColorG, m_worldConfig.terrainColorB));
 
         // Pede para o TerrainManager renderizar apenas o terreno.
         m_terrainManager.render(&m_terrainShaderProgram, this);
@@ -362,35 +363,8 @@ void MyGLWidget::paintGL() {
         m_tractorShaderProgram.bind(); // Ativa o programa de shader do trator.
         QMatrix4x4 tractorModelMatrix; // Matriz de modelo para o trator.
 
-        // Lógica de orientação avançada para alinhar o trator ao terreno:
-        // Pega a normal do terreno na posição exata do trator.
-        QVector3D terrainNormal = NoiseUtils::getNormal(m_tractorPosition.x(), m_tractorPosition.z());
-
-        // Calcula o vetor 'para frente' do trator baseado na rotação atual.
-        float angleRad = qDegreesToRadians(m_tractorRotation);
-        QVector3D baseForward(sin(angleRad), 0.0f, -cos(angleRad));
-
-        // Calcula os novos eixos de direção do trator, alinhados ao terreno.
-        // `tractorUp` é a normal do terreno.
-        QVector3D tractorUp = terrainNormal;
-        // `tractorRight` é o produto vetorial de `baseForward` e `tractorUp`, normalizado.
-        QVector3D tractorRight = QVector3D::crossProduct(baseForward, tractorUp).normalized();
-        // `tractorForward` é o produto vetorial de `tractorUp` e `tractorRight`, normalizado.
-        QVector3D tractorForward = QVector3D::crossProduct(tractorUp, tractorRight).normalized();
-
-        // Cria a matriz de rotação a partir dos novos eixos.
-        QMatrix4x4 rotationMatrix;
-        rotationMatrix.setColumn(0, tractorRight.toVector4D()); // Eixo X do trator.
-        rotationMatrix.setColumn(1, tractorUp.toVector4D());    // Eixo Y do trator.
-        rotationMatrix.setColumn(2, tractorForward.toVector4D());// Eixo Z do trator.
-
-        // Cria a matriz de translação para a posição do trator.
-        QMatrix4x4 translationMatrix;
-        translationMatrix.translate(m_tractorPosition);
-
-        // Combina as matrizes de translação e rotação para formar a matriz de modelo final do trator.
-        tractorModelMatrix = translationMatrix * rotationMatrix;
-        // Fim da lógica de orientação.
+        tractorModelMatrix.translate(m_tractorPosition);
+        tractorModelMatrix.rotate(m_tractorRotation, 0.0f, 1.0f, 0.0f);
 
         // Define os uniformes da matriz de projeção, visão e modelo para o shader do trator.
         m_tractorShaderProgram.setUniformValue("projectionMatrix", m_camera.projectionMatrix());
@@ -433,7 +407,7 @@ void MyGLWidget::paintGL() {
 void MyGLWidget::resizeGL(int w, int h) {
     glViewport(0, 0, w, h); // Define a área de renderização na janela.
     // Atualiza a matriz de projeção da câmera com a nova razão de aspecto.
-    m_camera.setPerspective(35.0f, static_cast<float>(w) / static_cast<float>(h > 0 ? h : 1), 0.1f, 1000.0f);
+    m_camera.setPerspective(m_worldConfig.cameraFov, static_cast<float>(w) / static_cast<float>(h > 0 ? h : 1), 0.1f, 1000.0f);
 }
 
 /**
@@ -455,9 +429,10 @@ void MyGLWidget::gameTick() {
         // Usa o estado combinado mais recente para velocidade e rotação
         QVector2D filtered_vel = m_immFilter->getStateVelocity();
 
+        const float TRACTOR_Y_OFFSET = 0.02f;
         m_tractorPosition.setX(predicted_pos.x());
         m_tractorPosition.setZ(predicted_pos.y());
-        m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()));
+        m_tractorPosition.setY(NoiseUtils::getHeight(m_tractorPosition.x(), m_tractorPosition.z()) + TRACTOR_Y_OFFSET);
 
         m_tractorCurrentSpeed = filtered_vel.length();
 
@@ -530,9 +505,9 @@ void MyGLWidget::setupTractorGL() {
     }
 
     // Define os vértices do trator como um triângulo simples apontando para o Z negativo.
-    GLfloat tractorVertices[] = {0.0f, 0.5f, -0.75, // Vértice superior
-                                 -0.5, 0.0f, 0.25f, // Vértice inferior esquerdo
-                                 0.5f, 0.0f, 0.25f}; // Vértice inferior direito
+    GLfloat tractorVertices[] = {0.0f, 0.25f, -0.75, // Vértice superior
+                                 -0.5, 0.25f, 0.25f, // Vértice inferior esquerdo
+                                 0.5f, 0.25f, 0.25f}; // Vértice inferior direito
 
     m_tractorVao.create(); // Cria o VAO para o trator.
     m_tractorVao.bind();   // Ativa o VAO.
@@ -630,7 +605,6 @@ void MyGLWidget::onGpsDataUpdate(const GpsData& data) {
     m_lastGpsData = m_currentGpsData;
     checkMovementStatus();
 }
-
 
 //Verifica se o trator esta em linha reta ou fazendo curva
 void MyGLWidget::checkMovementStatus() {

@@ -50,13 +50,67 @@ struct WorldConfig {
     // Membro: gridLineThickness
     // Tipo: float
     // Descrição: A espessra visual das linhas do grid
-    float gridLineThickness = 0.05f; // 5 centimetros de espessura
+    float gridLineThickness = 0.02f; // 5 centimetros de espessura
 
     // Membro: gridTileSize
     // O tamanho do "tile" (peça) da grade que é desenhado. Esta peça é movida
     // para dar a ilusão de uma grade infinita. Um valor maior preenche mais a tela,
     // um valor menor é um pouco mais eficiente. 40.0 é um bom começo.
     float gridTileSize = 40.0f;
+
+    // --- Configurações da Câmera ---
+    // Descrição: Parâmetros que controlam o comportamento da câmera que segue o trator.
+
+    // Membro: cameraFollowDistance
+    // Tipo: float
+    // Descrição: A distância que a câmera mantém atrás do trator.
+    float cameraFollowDistance = 8.5f;
+
+    // Membro: cameraFollowHeight
+    // Tipo: float
+    // Descrição: A altura da câmera em relação ao trator.
+    float cameraFollowHeight = 3.0f;
+
+    // Membro: cameraFov
+    // Tipo: float
+    // Descrição: O Campo de Visão (Field of View) da câmera, em graus. Funciona como um zoom.
+    //            Valores menores dão mais zoom, valores maiores dão uma visão mais ampla.
+    float cameraFov = 25.0f;
+
+    // --- Configurações de Cor ---
+    // Descrição: Parâmetros que controlam as cores dos elementos na cena.
+    //            Os valores de cor são em formato RGB, de 0.0 a 1.0.
+
+    // Cor do Grid de referência
+    float gridColorR = 0.4f; // Vermelho
+    float gridColorG = 0.4f; // Verde
+    float gridColorB = 0.4f; // Azul (R=1, G=1, B=0 -> Amarelo)
+
+    // Cor do Terreno em Baixa Altitude
+    float terrainColorR = 0.6f;
+    float terrainColorG = 0.6f;
+    float terrainColorB = 0.6f;
+
+    // --- Configurações da Ferramenta ---
+    // Descrição: Parâmetros inseridos pelo usuário no wizard de configuração inicial.
+    //            Inicializados com valores padrão.
+
+    // Membro: toolWidth
+    // Tipo: float
+    // Descrição: O tamanho (largura) total da barra de ferramentas, em metros.
+    float toolWidth = 12.0f;
+
+    // Membro: sectionCount
+    // Tipo: int
+    // Descrição: O número de seções que a barra de ferramentas possui.
+    int sectionCount = 5;
+
+    // Membro: sectionSpacing
+    // Tipo: float
+    // Descrição: O espaçamento entre as seções, em centímetros.
+    float sectionSpacing = 50.0f;
+
+
 };
 
 #endif // WORLDCONFIG_H

@@ -174,7 +174,7 @@ void TerrainGrid::render(QOpenGLShaderProgram* lineShaderProgram, const QMatrix4
     modelMatrix.translate(gridOffsetX, 0.0f, gridOffsetZ);
 
     lineShaderProgram->setUniformValue("modelMatrix", modelMatrix);
-    lineShaderProgram->setUniformValue("lineColor", QColor(255, 255, 0, 255));
+    lineShaderProgram->setUniformValue("lineColor", QColor::fromRgbF(m_config->gridColorR, m_config->gridColorG, m_config->gridColorB));
 
     m_vao.bind();
     // A primitiva de desenho GL_TRIANGLES é a correta para a geometria gerada.

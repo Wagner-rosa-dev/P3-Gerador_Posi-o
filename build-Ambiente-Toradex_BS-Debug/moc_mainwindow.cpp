@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MainWindow_t {
-    QByteArrayData data[18];
-    char stringdata0[188];
+    QByteArrayData data[16];
+    char stringdata0[181];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -33,31 +33,28 @@ struct qt_meta_stringdata_MainWindow_t {
 static const qt_meta_stringdata_MainWindow_t qt_meta_stringdata_MainWindow = {
     {
 QT_MOC_LITERAL(0, 0, 10), // "MainWindow"
-QT_MOC_LITERAL(1, 11, 14), // "rtkModeChanged"
-QT_MOC_LITERAL(2, 26, 0), // ""
-QT_MOC_LITERAL(3, 27, 4), // "mode"
-QT_MOC_LITERAL(4, 32, 14), // "updateFpsLabel"
-QT_MOC_LITERAL(5, 47, 3), // "fps"
-QT_MOC_LITERAL(6, 51, 15), // "updateTempLabel"
-QT_MOC_LITERAL(7, 67, 4), // "temp"
-QT_MOC_LITERAL(8, 72, 13), // "updateKmLabel"
-QT_MOC_LITERAL(9, 86, 2), // "km"
-QT_MOC_LITERAL(10, 89, 22), // "updateCoordinatesLabel"
-QT_MOC_LITERAL(11, 112, 3), // "lon"
-QT_MOC_LITERAL(12, 116, 3), // "lat"
-QT_MOC_LITERAL(13, 120, 25), // "updateMovementStatusLabel"
-QT_MOC_LITERAL(14, 146, 6), // "status"
-QT_MOC_LITERAL(15, 153, 15), // "updateImmStatus"
-QT_MOC_LITERAL(16, 169, 8), // "probReta"
-QT_MOC_LITERAL(17, 178, 9) // "probCurva"
+QT_MOC_LITERAL(1, 11, 12), // "showNextPage"
+QT_MOC_LITERAL(2, 24, 0), // ""
+QT_MOC_LITERAL(3, 25, 20), // "startMainApplication"
+QT_MOC_LITERAL(4, 46, 14), // "updateFpsLabel"
+QT_MOC_LITERAL(5, 61, 3), // "fps"
+QT_MOC_LITERAL(6, 65, 13), // "updateKmLabel"
+QT_MOC_LITERAL(7, 79, 2), // "km"
+QT_MOC_LITERAL(8, 82, 22), // "updateCoordinatesLabel"
+QT_MOC_LITERAL(9, 105, 3), // "lon"
+QT_MOC_LITERAL(10, 109, 3), // "lat"
+QT_MOC_LITERAL(11, 113, 25), // "updateMovementStatusLabel"
+QT_MOC_LITERAL(12, 139, 6), // "status"
+QT_MOC_LITERAL(13, 146, 15), // "updateImmStatus"
+QT_MOC_LITERAL(14, 162, 8), // "probReta"
+QT_MOC_LITERAL(15, 171, 9) // "probCurva"
 
     },
-    "MainWindow\0rtkModeChanged\0\0mode\0"
-    "updateFpsLabel\0fps\0updateTempLabel\0"
-    "temp\0updateKmLabel\0km\0updateCoordinatesLabel\0"
-    "lon\0lat\0updateMovementStatusLabel\0"
-    "status\0updateImmStatus\0probReta\0"
-    "probCurva"
+    "MainWindow\0showNextPage\0\0startMainApplication\0"
+    "updateFpsLabel\0fps\0updateKmLabel\0km\0"
+    "updateCoordinatesLabel\0lon\0lat\0"
+    "updateMovementStatusLabel\0status\0"
+    "updateImmStatus\0probReta\0probCurva"
 };
 #undef QT_MOC_LITERAL
 
@@ -72,29 +69,25 @@ static const uint qt_meta_data_MainWindow[] = {
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       1,       // signalCount
-
- // signals: name, argc, parameters, tag, flags
-       1,    1,   49,    2, 0x06 /* Public */,
+       0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       4,    1,   52,    2, 0x08 /* Private */,
-       6,    1,   55,    2, 0x08 /* Private */,
-       8,    1,   58,    2, 0x08 /* Private */,
-      10,    2,   61,    2, 0x08 /* Private */,
-      13,    1,   66,    2, 0x08 /* Private */,
-      15,    3,   69,    2, 0x08 /* Private */,
-
- // signals: parameters
-    QMetaType::Void, QMetaType::QString,    3,
+       1,    0,   49,    2, 0x08 /* Private */,
+       3,    0,   50,    2, 0x08 /* Private */,
+       4,    1,   51,    2, 0x08 /* Private */,
+       6,    1,   54,    2, 0x08 /* Private */,
+       8,    2,   57,    2, 0x08 /* Private */,
+      11,    1,   62,    2, 0x08 /* Private */,
+      13,    3,   65,    2, 0x08 /* Private */,
 
  // slots: parameters
+    QMetaType::Void,
+    QMetaType::Void,
     QMetaType::Void, QMetaType::Int,    5,
     QMetaType::Void, QMetaType::Float,    7,
-    QMetaType::Void, QMetaType::Float,    9,
-    QMetaType::Void, QMetaType::Float, QMetaType::Float,   11,   12,
-    QMetaType::Void, QMetaType::QString,   14,
-    QMetaType::Void, QMetaType::QString, QMetaType::Double, QMetaType::Double,   14,   16,   17,
+    QMetaType::Void, QMetaType::Float, QMetaType::Float,    9,   10,
+    QMetaType::Void, QMetaType::QString,   12,
+    QMetaType::Void, QMetaType::QString, QMetaType::Double, QMetaType::Double,   12,   14,   15,
 
        0        // eod
 };
@@ -105,23 +98,14 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         auto *_t = static_cast<MainWindow *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->rtkModeChanged((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 1: _t->updateFpsLabel((*reinterpret_cast< int(*)>(_a[1]))); break;
-        case 2: _t->updateTempLabel((*reinterpret_cast< float(*)>(_a[1]))); break;
+        case 0: _t->showNextPage(); break;
+        case 1: _t->startMainApplication(); break;
+        case 2: _t->updateFpsLabel((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 3: _t->updateKmLabel((*reinterpret_cast< float(*)>(_a[1]))); break;
         case 4: _t->updateCoordinatesLabel((*reinterpret_cast< float(*)>(_a[1])),(*reinterpret_cast< float(*)>(_a[2]))); break;
         case 5: _t->updateMovementStatusLabel((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 6: _t->updateImmStatus((*reinterpret_cast< const QString(*)>(_a[1])),(*reinterpret_cast< double(*)>(_a[2])),(*reinterpret_cast< double(*)>(_a[3]))); break;
         default: ;
-        }
-    } else if (_c == QMetaObject::IndexOfMethod) {
-        int *result = reinterpret_cast<int *>(_a[0]);
-        {
-            using _t = void (MainWindow::*)(const QString & );
-            if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&MainWindow::rtkModeChanged)) {
-                *result = 0;
-                return;
-            }
         }
     }
 }
@@ -164,13 +148,6 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         _id -= 7;
     }
     return _id;
-}
-
-// SIGNAL 0
-void MainWindow::rtkModeChanged(const QString & _t1)
-{
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
-    QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 QT_WARNING_POP
 QT_END_MOC_NAMESPACE

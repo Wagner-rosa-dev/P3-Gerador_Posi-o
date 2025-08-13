@@ -5,6 +5,8 @@
 #include "chunk.h" // Inclui o cabeçalho da classe chunk, necessário para registrar o tipo MeshData.
 #include "speedcontroller.h"
 #include "logger.h"
+#include <QApplication>
+#include <QDebug>
 
 /**
  * @brief main
@@ -22,6 +24,10 @@ int main(int argc, char *argv[])
     // Esta linha é essencial para qualquer aplicação Qt, pois ela inicializa o sistema de eventos
     // e gerencia os recursos da aplicação.
     QApplication a(argc, argv);
+
+    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+
+
 
     //Configuração do logger
     //Voce pode alterar essas linhas para controlar o comportamento do log:

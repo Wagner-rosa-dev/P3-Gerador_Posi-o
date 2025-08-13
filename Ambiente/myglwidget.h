@@ -53,7 +53,7 @@ public:
     //            SpeedController para comunicação serial.
     // Parâmetros:
     //   - parent: O objeto pai (QWidget) deste widget, para gerenciamento de memória.
-    MyGLWidget(QWidget *parent = nullptr);
+    explicit MyGLWidget(const WorldConfig& config, QWidget *parent = nullptr);
 
     // Destrutor: ~MyGLWidget
     // Descrição: Garante que o contexto OpenGL seja liberado adequadamente antes da destruição
